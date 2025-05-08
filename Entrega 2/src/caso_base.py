@@ -122,7 +122,7 @@ for index, row in tiendas_data.iterrows():
         'camiones': n_camiones,
         'capacidad': capacidad,
         'rutas': [
-            {'camion': i + 1, 'zonas': [], 'carga': 0} for i in range(n_camiones)
+            {'camion': i + 1, 'zonas': [], 'carga': 0, 'distancia_recorrida': 0} for i in range(n_camiones)
         ]
     }
     print('\n')
@@ -149,6 +149,8 @@ for index, row in tiendas_data.iterrows():
             'x': row['pos_x'],
             'y': row['pos_y']
         })
+        pos_actual_camion = posicion_camion
+        distancia_total_camion = 0
 
         index = 0
         while carga_camion < int(capacidad) and index < len(sub_zonas):
@@ -174,6 +176,12 @@ for index, row in tiendas_data.iterrows():
                 'x': fila['x_zona'],
                 'y': fila['y_zona']
             })
+            # Calcular distancia desde la posición actual del camión a la nueva zona
+            distancia = np.linalg.norm(
+                pos_actual_camion - np.array([fila['x_zona'], fila['y_zona']]))
+
+            distancia_total_camion += distancia
+            pos_actual_camion = np.array([fila['x_zona'], fila['y_zona']])
             carga_camion += volumen_fila
             index += 1
 
@@ -185,8 +193,11 @@ for index, row in tiendas_data.iterrows():
             'x': row['pos_x'],
             'y': row['pos_y']
         })
+        distancia_total_camion += np.linalg.norm(
+            pos_actual_camion - np.array([row['pos_x'], row['pos_y']]))
         camiones_rutas_dict[tienda]['rutas'][i]['zonas'] = zonas_recorrido
         camiones_rutas_dict[tienda]['rutas'][i]['carga'] = carga_camion
+        camiones_rutas_dict[tienda]['rutas'][i]['distancia_recorrida'] = distancia_total_camion
 
     # Revisar demanda insatisfecha
     if not sub_zonas.empty:
@@ -215,7 +226,8 @@ for tienda, info in camiones_rutas_dict.items():
                 'id_zona': zona['id_zona'],
                 'x': zona['x'],
                 'y': zona['y'],
-                'carga_total': ruta['carga']
+                'carga_total_camion': ruta['carga'],
+                'distancia_total_recorrida_camion': ruta['distancia_recorrida']
             })
 df_rutas = pd.DataFrame(rutas_output)
 df_rutas.to_csv('rutas_camiones.csv', index=False)
