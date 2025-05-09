@@ -230,7 +230,7 @@ for tienda, info in camiones_rutas_dict.items():
                 'distancia_total_recorrida_camion': ruta['distancia_recorrida']
             })
 df_rutas = pd.DataFrame(rutas_output)
-df_rutas.to_csv('rutas_camiones.csv', index=False)
+df_rutas.to_csv('rutas_camiones_caso_base.csv', index=False)
 
 # Guardar demanda insatisfecha en un archivo CSV
 if demanda_insatisfecha_por_tienda:

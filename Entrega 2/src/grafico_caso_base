@@ -1,21 +1,18 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-# Carga del CSV de rutas
-df = pd.read_csv('rutas_camiones.csv')
+df = pd.read_csv('rutas_camiones_caso_base.csv')
 
-# Para cada tienda, graficar en una sola figura todas sus rutas
 for tienda, df_tienda in df.groupby('tienda'):
     plt.figure()
-    # Cada camión con su propia línea (usa el ciclo de colores por default)
+
     for camion, df_camion in df_tienda.groupby('camion'):
         xs = df_camion['x'].values
         ys = df_camion['y'].values
         zs = df_camion['id_zona'].values
 
-        # Trazar la ruta del camión
         plt.plot(xs, ys, marker='o', label=f'Camión {camion}')
-        # Etiquetar cada punto con su id_zona
+
         for x, y, zona in zip(xs, ys, zs):
             plt.text(x, y, str(zona), fontsize=8, ha='right', va='bottom')
 
