@@ -32,18 +32,15 @@ dist_df = pd.DataFrame(
 print(dist_df.head())
 
 path_venta_zona_1 = os.path.join(
-    '..', '..', 'Datos', 'venta_zona_1_20250115.csv')
-path_venta_zona_1 = r'C:\Users\dante\Desktop\Capstone\Capstone-Grupo-15\Datos\venta_zona_1_20250115.csv'
-
+    base_dir, '..', '..', 'Datos', 'venta_zona_1_20250115.csv')
 clientes_1_data = pd.read_csv(path_venta_zona_1)
-path_flota = os.path.join('..', '..', 'Datos', 'flota_20250115.csv')
-path_flota = r'C:\Users\dante\Desktop\Capstone\Capstone-Grupo-15\Datos\flota_20250115.csv'
+path_flota = os.path.join(base_dir, '..', '..', 'Datos', 'flota_20250115.csv')
 flota_data = pd.read_csv(path_flota)
-path_camiones = os.path.join('..', '..', 'Datos', 'vehiculos_20250115.csv')
-path_camiones = r'C:\Users\dante\Desktop\Capstone\Capstone-Grupo-15\Datos\vehiculos_20250115.csv'
+path_camiones = os.path.join(
+    base_dir, '..', '..', 'Datos', 'vehiculos_20250115.csv')
 camiones_data = pd.read_csv(path_camiones)
-path_productos = os.path.join('..', '..', 'Datos', 'productos_20250115.csv')
-path_productos = r'C:\Users\dante\Desktop\Capstone\Capstone-Grupo-15\Datos\productos_20250115.csv'
+path_productos = os.path.join(
+    base_dir, '..', '..', 'Datos', 'productos_20250115.csv')
 productos_data = pd.read_csv(path_productos)
 
 print("Datos de clientes:")
