@@ -4,10 +4,11 @@ from scipy.spatial.distance import cdist
 import os
 print(f"Directorio actual: {os.getcwd()}")
 # Se cargan los datos de zonas y tiendas
-path_zonas = os.path.join('..', '..', 'Datos', 'zonas_20250115.csv')
-path_tiendas = os.path.join('..', '..', 'Datos', 'tiendas_20250115.csv')
-path_zonas = r'C:\Users\dante\Desktop\Capstone\Capstone-Grupo-15\Datos\zonas_20250115.csv'
-path_tiendas = r'C:\Users\dante\Desktop\Capstone\Capstone-Grupo-15\Datos\tiendas_20250115.csv'
+
+base_dir = os.path.dirname(__file__)
+path_zonas = os.path.join(base_dir, '..', '..', 'Datos', 'zonas_20250115.csv')
+path_tiendas = os.path.join(
+    base_dir, '..', '..', 'Datos', 'tiendas_20250115.csv')
 zonas_data = pd.read_csv(path_zonas)
 tiendas_data = pd.read_csv(path_tiendas)
 # Se resta 1 a las coordenadas de las tiendas para que coincidan con el sistema de coordenadas de las zonas

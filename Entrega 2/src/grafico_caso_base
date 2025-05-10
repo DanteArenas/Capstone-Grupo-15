@@ -1,7 +1,21 @@
 import pandas as pd
 import matplotlib.pyplot as plt
+import os
 
-df = pd.read_csv('rutas_camiones_caso_base.csv')
+# Construir la ruta relativa basada en la ubicación del script
+base_dir = os.path.dirname(__file__)
+path_camiones = os.path.join(
+    base_dir, '..', 'resultados', 'rutas_camiones_caso_base.csv')
+
+# Verificar la ruta absoluta y la existencia del archivo
+absolute_path_camiones = os.path.abspath(path_camiones)
+print(f"Ruta absoluta del archivo: {absolute_path_camiones}")
+
+if not os.path.exists(absolute_path_camiones):
+    raise FileNotFoundError(
+        f"El archivo no existe en la ruta: {absolute_path_camiones}")
+
+df = pd.read_csv(path_camiones)
 
 for tienda, df_tienda in df.groupby('tienda'):
     plt.figure()
