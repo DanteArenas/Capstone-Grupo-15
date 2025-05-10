@@ -72,12 +72,6 @@ zonas_datos = zonas_datos.drop(
 print("Datos de zonas con demanda:")
 print(zonas_datos.head())
 
-# print("Datos de tiendas:")
-# for index, row in tiendas_data.iterrows():
-#     print(f"Fila {index}:")
-#     print(row)
-#     print("-" * 40)  # Separador para mayor claridad
-
 # === Agrupar por tienda física ===
 tiendas = zonas_datos['tienda_zona'].unique()
 rutas_totales = {}
@@ -89,32 +83,31 @@ demanda_insatisfecha_por_tienda = {}
 for index, row in tiendas_data.iterrows():
     tienda = row['id_tienda']
     print(f"\nProcesando tienda: {tienda}")
+    # row de la forma: id_tienda tipo_tienda pos_x  pos_y
     print(row)
 
     # Subconjunto de zonas asociadas a esta tienda
+    # id_zona  id_producto  venta_digital  voolumenn  x_zona  y_zona  tienda_zona
     sub_zonas = zonas_datos[zonas_datos['tienda_zona'] == tienda].copy()
     sub_zonas = sub_zonas.reset_index(drop=True)
+    sub_zonas[['x_zona', 'y_zona']] = sub_zonas[[
+        'x_zona', 'y_zona']].apply(pd.to_numeric)
 
     # Obtener tipo y cantidad de camiones para la tienda
     flota_info = flota_data[flota_data['id_tienda'] == tienda]
-    if flota_info.empty:
-        print(f"No hay datos de flota para tienda {tienda}, se omite.")
-        continue
 
+    # flota_info es una fila: id_tienda  id_camion  N
     id_camion = flota_info.iloc[0]['id_camion']
     n_camiones = flota_info.iloc[0]['N']
     capacidad = camiones_data.loc[camiones_data['tipo_camion']
                                   == id_camion, 'Q'].values[0]
 
-    # print(sub_zonas)
-    # print(demanda_por_zona)
-
     # Cargar el camión y definir rutas
-
     posicion_camion = row[['pos_x', 'pos_y']].values
 
     print(f"\nPosición inicial del camión: {posicion_camion}")
     print(f"\nCapacidad del camión: {capacidad}")
+
     camiones_rutas_dict[tienda] = {
         'posicion_tienda': posicion_camion,
         'camiones': n_camiones,
@@ -211,8 +204,8 @@ for tienda, info in camiones_rutas_dict.items():
             f"  Camión {ruta['camion']} - Carga: {ruta['carga']:.2f}, Zonas visitadas: {len(ruta['zonas'])}")
 
 # Guardar rutas en un archivo CSV
-
-os.chdir(r'C:\Users\dante\Desktop\Capstone\Capstone-Grupo-15\Entrega 2\resultados')
+resultados_dir = os.path.join(base_dir, '..', 'resultados')
+os.chdir(resultados_dir)
 
 rutas_output = []
 for tienda, info in camiones_rutas_dict.items():
