@@ -3,61 +3,43 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import os
 
-# Construir la ruta relativa basada en la ubicación del script
 base_dir = os.path.dirname(__file__)
-path_camiones = os.path.join(
-    base_dir, '..', 'resultados', 'rutas_camiones_caso_base_v2.csv')
+path_resultados_CW = os.path.join(
+    base_dir, '..', 'resultados', 'resultados_CW.csv')
+data_resultados = pd.read_csv(path_resultados_CW)
+print(data_resultados.head())
 
-# Verificar la ruta absoluta y la existencia del archivo
-absolute_path_camiones = os.path.abspath(path_camiones)
-print(f"Ruta absoluta del archivo: {absolute_path_camiones}")
-
-if not os.path.exists(absolute_path_camiones):
-    raise FileNotFoundError(
-        f"El archivo no existe en la ruta: {absolute_path_camiones}")
-
-df = pd.read_csv(path_camiones)
-
-distancia_total = 0
-
-for tienda, df_tienda in df.groupby('tienda'):
-    plt.figure()
-
-    for camion, df_camion in df_tienda.groupby('camion'):
-        xs = df_camion['x'].values
-        ys = df_camion['y'].values
-        zs = df_camion['id_zona'].values
-
-        plt.plot(xs, ys, marker='o', label=f'Camión {camion}')
-
-        for x, y, zona in zip(xs, ys, zs):
-            plt.text(x, y, str(zona), fontsize=8, ha='right', va='bottom')
-        distancia_camion = df_camion['distancia_total_recorrida_camion'].values[0]
-        distancia_total += distancia_camion
-
-    plt.title(f'Tienda {tienda} - Rutas de Camiones')
-    plt.xlabel('Coordenada X')
-    plt.ylabel('Coordenada Y')
-    plt.legend(title='Camiones')
-    plt.grid(True)
-    plt.tight_layout()
-    path_figura = os.path.join(
-        base_dir, '..', 'resultados', 'graficos_caso_base_v2', f'rutas_camiones_tienda_{tienda}.png')
-    plt.savefig(path_figura)
-    # plt.show()
-    plt.close()
-
-
-# ---------- Gráfico de todas las tiendas y camiones ---------- #
+path_zonas = os.path.join(base_dir, '..', '..', "Datos", "zonas_20250115.csv")
+data_zonas = pd.read_csv(path_zonas)
+data_zonas = data_zonas.drop(
+    columns=[col for col in data_zonas.columns if "Unnamed" in col])
+print(data_zonas.head())
 
 plt.figure(constrained_layout=True)
-for tienda, df_tienda in df.groupby('tienda'):
-    for camion, df_camion in df_tienda.groupby('camion'):
-        xs = df_camion['x'].values
-        ys = df_camion['y'].values
-        plt.plot(xs, ys, zorder=2)
+for i, row in data_resultados.iterrows():
+
+    rutas = row['rutas']
+    rutas = rutas.split("], [")
+    for i in range(len(rutas)):
+        rutas[i] = rutas[i].strip("[]").split(", ")
+        for j in range(len(rutas[i])):
+            rutas[i][j] = int(rutas[i][j])
+
+    camion = 1
+    for ruta in rutas:
+        xs_camion = []
+        ys_camion = []
+        for id_zona in ruta:
+            zona = data_zonas.loc[data_zonas['id_zona'] == id_zona]
+            xs_camion.append(zona['x_zona'].values[0])
+            ys_camion.append(zona['y_zona'].values[0])
+
+        plt.plot(xs_camion, ys_camion, zorder=2)
+        camion += 1
+
 
 # ---------- Mapa de tiendas de entrega 1 ---------- #
+
 path_tiendas = os.path.join(
     base_dir, '..', '..', 'Datos', 'tiendas_20250115.csv')
 df = pd.read_csv(path_tiendas)
@@ -86,7 +68,7 @@ plt.scatter(tiendas_medianas['pos_x'], tiendas_medianas['pos_y'],
 plt.scatter(tiendas_grandes['pos_x'], tiendas_grandes['pos_y'],
             c='red', marker='o', label='Tienda grande', zorder=3)
 
-plt.title('Rutas de Camiones - Caso Base')
+plt.title('Rutas de Camiones - Clarke and Wright')
 plt.xlabel('Coordenada X')
 plt.ylabel('Coordenada Y')
 plt.grid(True, linestyle="--", alpha=0.5)
@@ -123,7 +105,7 @@ im = plt.imshow(grilla_indices,  cmap=color_map,
                 norm=norm, zorder=1, alpha=0.5)
 
 plt.savefig(os.path.join(
-    base_dir, '..', 'resultados', 'graficos_caso_base_v2', 'rutas_camiones_todas_las_tiendas.png'))
+    base_dir, '..', 'resultados', 'graficos_CW', 'rutas_camiones_todas_las_tiendas_CW.png'))
 plt.show()
 print(
     f"Distancia total recorrida por todos los camiones: {distancia_total} unidades")
