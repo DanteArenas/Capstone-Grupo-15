@@ -97,4 +97,21 @@ for tienda, resultado in res.items():
     print(f"  Volumen a cubrir: {resultado['volumen_a_cubrir']}")
     print(
         f"  Capacidad de despacho: {resultado['capacidad_despacho_tienda']}")
+    print(
+        f"Diferencia: {resultado['capacidad_despacho_tienda'] - resultado['volumen_a_cubrir']}")
+    print(f"  Lograble: {resultado['lograble']}")
+
+# Ordenar resultados por diferencia de menor a mayor (copilot)
+resultados_ordenados = sorted(res.items(
+), key=lambda x: x[1]['capacidad_despacho_tienda'] - x[1]['volumen_a_cubrir'])
+
+
+print()
+print("Resultados ordenados por diferencia (menor a mayor):")
+for tienda, resultado in resultados_ordenados:
+    print(f"Tienda {tienda}:")
+    print(f"  Volumen a cubrir: {resultado['volumen_a_cubrir']}")
+    print(f"  Capacidad de despacho: {resultado['capacidad_despacho_tienda']}")
+    print(
+        f"  Diferencia: {resultado['capacidad_despacho_tienda'] - resultado['volumen_a_cubrir']}")
     print(f"  Lograble: {resultado['lograble']}")
