@@ -15,6 +15,7 @@ data_zonas = data_zonas.drop(
     columns=[col for col in data_zonas.columns if "Unnamed" in col])
 print(data_zonas.head())
 
+distancia_total = 0
 plt.figure(constrained_layout=True)
 for i, row in data_resultados.iterrows():
 
@@ -36,6 +37,12 @@ for i, row in data_resultados.iterrows():
 
         plt.plot(xs_camion, ys_camion, zorder=2)
         camion += 1
+
+    distancia = row['distancia']
+    lista_distancia = distancia.strip("[]").split(",")
+    for i in range(len(lista_distancia)):
+        distancia_total += float(lista_distancia[i])
+    print(f"Distancia recorrida para la tienda {camion}: {distancia}")
 
 
 # ---------- Mapa de tiendas de entrega 1 ---------- #
