@@ -93,7 +93,7 @@ for index, row in tiendas_data.iterrows():
 tiendas = zonas_datos['tienda_zona'].unique()
 rutas_totales = {}
 
-demanda_insatisfecha = pd.DataFrame()
+demanda_insatisfecha = pd.DataFrame(columns=['id_zona', 'demanda', 'tienda'])
 # Demanda insatisfecha por tienda
 
 # Algoritmo Clarke-Wright
@@ -247,9 +247,11 @@ for index, row in tiendas_data.iterrows():
 
     rutas_finales.sort(key=lambda r: r['distancia'])  # priorizar rutas cortas
     rutas_finales = rutas_finales[:n_camiones]  # Limitar a N rutas
+    # cada fila de rutas_finales es de la forma: {'ruta': [id_zona1, id_zona2, ...], 'carga': carga, 'distancia': distancia}
+    # print(f"Rutas finales para tienda {tienda}:")
+    # print(rutas_finales)
 
-    rutas_totales[tienda] = rutas_finales
-    # rutas_totales[tienda] = rutas_finales[:n_camiones]  # Limitar a N rutas
+    # rutas_totales[tienda] = rutas_finales
 
     # 1. Recolectar demanda total original por zona
     demanda_por_zona = sub_zonas_agrupadas[['id_zona', 'venta_digital']].copy()
@@ -268,11 +270,84 @@ for index, row in tiendas_data.iterrows():
     print("Zonas con demanda insatisfecha:")
     print(demanda_insat_tienda)
 
+    # --- Cheapest insertion para la demanda insatisfecha (ChatGPT) ---
+    zonas_demanda_insat = demanda_insat_tienda[[
+        'id_zona', 'demanda']].to_dict('records')  # lisa de dicts
+    # zonas_demanda_insat de la forma: [{'id_zona': id_zona, 'demanda': demanda}, ...]
+    print("zonas_demanda_insat:")
+    print(zonas_demanda_insat)
+
+    residuales = []
+    # Calcular la capacidad residual de cada camión y guardar en residuales
+    for r in rutas_finales:
+        carga_usada = r['carga']
+        residuales.append(capacidad - carga_usada)
+
+    # residuales de la forma: [capacidad_residual_camion_1, capacidad_residual_camion_2, ...]
+
+    idx_por_zona = {id_zona: idx for idx, id_zona in enumerate(
+        [id_zona_tienda] + list(sub_zonas_agrupadas['id_zona']))}
+
+    volumen_zona = dict(zip(
+        carga_agrupada_por_zona['id_zona'],
+        carga_agrupada_por_zona['volumen_total']
+    ))
+
+    id_zona_deposito = deposito_filas.iloc[0]['id_zona']
+    volumen_zona[id_zona_deposito] = volumen_total_zona_deposito
+    for zona in zonas_demanda_insat[:]:
+        # mejor inserción de la zona encoontrada
+        best = {'delta': float('inf')}
+        for idx_r, r in enumerate(rutas_finales):  # para cada ruta (camión)
+            # ver si el camión tiene capacidad para agregar la zona
+            if residuales[idx_r] < zona['demanda']:
+                continue
+            # recorre pares consecutivos en r['ruta']
+            ruta = r['ruta']
+            for k in range(len(ruta)-1):
+                i, j = ruta[k], ruta[k+1]
+                # utilizar los indices de la matriz de distancias
+                i_idx = idx_por_zona[i]
+                z_idx = idx_por_zona[zona['id_zona']]
+                j_idx = idx_por_zona[j]
+                delta = dist[i_idx, z_idx] + \
+                    dist[z_idx, j_idx] - dist[i_idx, j_idx]
+                # delta es la distancia de insertar la zona a la ruta
+                if delta < best['delta']:
+                    best = {'delta': delta, 'r_idx': idx_r, 'pos': k+1}
+        if 'r_idx' in best:
+
+            # rutas_finales[best['r_idx']]['ruta'].insert(
+            #     best['pos'], zona['id_zona'])
+            # residuales[best['r_idx']] -= zona['demanda']
+
+            # nueva_carga = sum(volumen_zona[z] for z in r['ruta'])
+            # inserto la zona
+            ruta_obj = rutas_finales[best['r_idx']]
+            ruta_obj['ruta'].insert(best['pos'], zona['id_zona'])
+            # Recalcula usando la ruta correcta:
+            nueva_carga = sum(volumen_zona[z] for z in ruta_obj['ruta'])
+            ruta_obj['carga'] = nueva_carga
+            residuales[best['r_idx']] = capacidad - nueva_carga
+            ruta_obj['distancia'] = sum(
+                dist[idx_por_zona[ruta_obj['ruta'][k]],
+                     idx_por_zona[ruta_obj['ruta'][k+1]]]
+                for k in range(len(ruta_obj['ruta'])-1)
+            )
+            zonas_demanda_insat.remove(zona)
+
+        # si no hay best válido, esa zona permanece sobrante
+
     # 4) Acumular en un DataFrame global
-    demanda_insatisfecha = pd.concat(
-        [demanda_insatisfecha, demanda_insat_tienda],
-        ignore_index=True
-    )
+    for z in zonas_demanda_insat:
+        demanda_insatisfecha = pd.concat([
+            demanda_insatisfecha,
+            pd.DataFrame(
+                [{'id_zona': z['id_zona'], 'demanda': z['demanda'], 'tienda': tienda}])
+        ], ignore_index=True)
+
+    # 5) Guardar rutas finales
+    rutas_totales[tienda] = rutas_finales
 
 
 # === Mostrar resultados ===
