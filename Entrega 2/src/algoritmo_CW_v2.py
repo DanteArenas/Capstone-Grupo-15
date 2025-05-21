@@ -246,6 +246,8 @@ for index, row in tiendas_data.iterrows():
         })
 
     rutas_finales.sort(key=lambda r: r['distancia'])  # priorizar rutas cortas
+    rutas_finales = rutas_finales[:n_camiones]  # Limitar a N rutas
+
     rutas_totales[tienda] = rutas_finales
     # rutas_totales[tienda] = rutas_finales[:n_camiones]  # Limitar a N rutas
 
@@ -255,24 +257,22 @@ for index, row in tiendas_data.iterrows():
 
     # 2. Listado de zonas visitadas
     zonas_visitadas = set()
-    for rutas in rutas_totales.values():
-        for r in rutas:
-            # ruta['ruta'] es lista de id_zona
-            zonas_visitadas |= set(r['ruta'])
+    for r in rutas_finales:
+        zonas_visitadas |= set(r['ruta'])
 
     # 3. Zonas sin cubrir (demanda insatisfecha)
-    demanda_insatisfecha = demanda_por_zona[~demanda_por_zona['id_zona'].isin(
-        zonas_visitadas)]
+    demanda_insat_tienda = demanda_por_zona[
+        ~demanda_por_zona['id_zona'].isin(zonas_visitadas)
+    ].copy()
+    demanda_insat_tienda['tienda'] = tienda
     print("Zonas con demanda insatisfecha:")
-    print(demanda_insatisfecha)
+    print(demanda_insat_tienda)
 
-    # 4. Total de demanda insatisfecha
-    total_insat = demanda_insatisfecha['demanda'].sum()
-    print(f"Demanda total insatisfecha: {total_insat}")
-    if total_insat > 0:
-        print(f"Demanda insatisfecha para tienda {tienda}: {total_insat}")
-        demanda_insatisfecha['tienda'] = tienda
-        demanda_insatisfecha['demanda'] = total_insat
+    # 4) Acumular en un DataFrame global
+    demanda_insatisfecha = pd.concat(
+        [demanda_insatisfecha, demanda_insat_tienda],
+        ignore_index=True
+    )
 
 
 # === Mostrar resultados ===
