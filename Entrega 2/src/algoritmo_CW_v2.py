@@ -93,6 +93,9 @@ for index, row in tiendas_data.iterrows():
 tiendas = zonas_datos['tienda_zona'].unique()
 rutas_totales = {}
 
+demanda_insatisfecha = pd.DataFrame()
+# Demanda insatisfecha por tienda
+
 # Algoritmo Clarke-Wright
 
 for index, row in tiendas_data.iterrows():
@@ -244,7 +247,7 @@ for index, row in tiendas_data.iterrows():
 
     rutas_finales.sort(key=lambda r: r['distancia'])  # priorizar rutas cortas
     rutas_totales[tienda] = rutas_finales
-    rutas_totales[tienda] = rutas_finales[:n_camiones]  # Limitar a N rutas
+    # rutas_totales[tienda] = rutas_finales[:n_camiones]  # Limitar a N rutas
 
     # 1. Recolectar demanda total original por zona
     demanda_por_zona = sub_zonas_agrupadas[['id_zona', 'venta_digital']].copy()
@@ -266,10 +269,19 @@ for index, row in tiendas_data.iterrows():
     # 4. Total de demanda insatisfecha
     total_insat = demanda_insatisfecha['demanda'].sum()
     print(f"Demanda total insatisfecha: {total_insat}")
+    if total_insat > 0:
+        print(f"Demanda insatisfecha para tienda {tienda}: {total_insat}")
+        demanda_insatisfecha['tienda'] = tienda
+        demanda_insatisfecha['demanda'] = total_insat
 
 
 # === Mostrar resultados ===
 resultados = []
+n_camiones_disponibles_por_tienda = {}
+for index, row in flota_data.iterrows():
+    tienda = row['id_tienda']
+    n_camiones_disponibles_por_tienda[tienda] = row['N']
+
 for tienda, rutas in rutas_totales.items():
     print(f"\n Rutas desde tienda: {tienda}")
     for i, r in enumerate(rutas):
@@ -281,14 +293,9 @@ for tienda, rutas in rutas_totales.items():
         'carga': [r['carga'] for r in rutas],
         'distancia': [r['distancia'] for r in rutas],
         'carga_total': sum(r['carga'] for r in rutas),
-        'n_camiones_utilizados': len(rutas)
+        'n_camiones_utilizados': len(rutas),
+        'n_camiones_disponibles': n_camiones_disponibles_por_tienda[tienda]
     })
-
-# Demanda insatisfecha por tienda
-for tienda, rutas in rutas_totales.items():
-    print(f"\nDemanda insatisfecha para tienda {tienda}:")
-    for r in rutas:
-        print(f"  Ruta: {r['ruta']}, Demanda insatisfecha: {total_insat}")
 
 
 print("\nResultados finales:")
@@ -298,5 +305,10 @@ df_resultados = pd.DataFrame(resultados)
 print(df_resultados)
 
 # Guardar resultados en CSV
-output_path = os.path.join(base_dir, '..', 'resultados', 'resultados_CW.csv')
+output_path = os.path.join(
+    base_dir, '..', 'resultados', 'resultados_CW_v2.csv')
 df_resultados.to_csv(output_path, index=False)
+
+demanda_insatisfecha_path = os.path.join(
+    base_dir, '..', 'resultados', 'demanda_insatisfecha_CW_v2.csv')
+demanda_insatisfecha.to_csv(demanda_insatisfecha_path, index=False)
