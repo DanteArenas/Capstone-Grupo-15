@@ -1,0 +1,1 @@
+# este archivo juntará todo, se llamarán a las funciones de cada archivo y se generarán las simulaciones 
