@@ -12,11 +12,13 @@ from matplotlib.colors import ListedColormap, BoundaryNorm
 import matplotlib.pyplot as plt
 
 
-def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_camiones, path_producto, dia):
+def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_camiones, path_productos, dia):
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
     zonas_data = pd.read_csv(path_zonas)
     tiendas_data = pd.read_csv(path_tiendas)
+    tiendas_data['pos_x'] -= 1
+    tiendas_data['pos_y'] -= 1
     coords_zonas = zonas_data[['x_zona', 'y_zona']].values
     coords_tiendas = tiendas_data[['pos_x', 'pos_y']].values
 
