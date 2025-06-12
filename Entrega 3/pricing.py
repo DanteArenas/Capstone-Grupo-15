@@ -12,7 +12,16 @@ from pulp import LpMaximize, LpProblem, LpVariable, lpSum, LpContinuous
 def cargar_datos_csv(path):
     return pd.read_csv(path)
 
-def procesar_datos_de_distancia(df, n_clusters=3):
+def procesar_datos_de_distancia(path_resultados_csv, n_clusters=3):
+    """
+    Retorna:
+    - df_ordenado: DataFrame con columnas ['tienda', 'vehiculo', 'distancia', 'cluster_ordenado']
+    - kmeans: modelo KMeans entrenado
+    """
+    import ast
+    df = pd.read_csv(path_resultados_csv)
+
+    # Aseguramos que la columna 'distancia' sea una lista
     df['distancia'] = df['distancia'].apply(ast.literal_eval)
 
     distancias = []
@@ -45,7 +54,13 @@ def procesar_datos_de_distancia(df, n_clusters=3):
 
     return df_ordenado, kmeans
 
+
 def generar_matriz_ck(df_distancias_ordenado, df_cw):
+    """
+    Retorna:
+    - df_ordenado: DataFrame con columnas ['cluster_ordenado', 'n_k (total clientes)', 'centroide', 'c_k']
+    - kmeans: modelo KMeans entrenado
+    """
     df_cw = df_cw.copy()
     df_cw['rutas'] = df_cw['rutas'].apply(ast.literal_eval)
 
@@ -72,6 +87,10 @@ def generar_matriz_ck(df_distancias_ordenado, df_cw):
     return nk_ck_cluster
 
 def resolver_precio_optimo(nk_ck_cluster, beta=0.0152, theta=0.9, max_price=55.9, num_precios=100):
+    """
+    Retorna:
+    - nk_ck_cluster: DataFrame con columnas ['cluster_ordenado', 'n_k (total clientes)', 'centroide', 'c_k', 'p_k (entero óptimo)', 'U_k (entero óptimo)']
+    """
     price_candidates = np.linspace(0, max_price, num_precios)
     price_indices = list(range(len(price_candidates)))
 
