@@ -15,5 +15,6 @@ path_productos = os.path.join(
 
 dia = 1
 
-generar_rutas(path_zonas, path_tiendas, path_venta_zona_1,
-              path_flota, path_camiones, path_productos, dia)
+data_resultados = generar_rutas(path_zonas, path_tiendas, path_venta_zona_1,
+                                path_flota, path_camiones, path_productos, dia)
+graficar_rutas(data_resultados, path_zonas, path_tiendas, dia)

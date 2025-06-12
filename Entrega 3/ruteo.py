@@ -333,31 +333,45 @@ def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_ca
 
     # Guardar resultados en CSV
     output_path = os.path.join(
-        base_dir, 'resultados', f'resultados_CW_dia_{dia}.csv')
+        base_dir, 'resultados', f'dia_{dia}', f'resultados_CW_dia_{dia}.csv')
+
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
     df_resultados.to_csv(output_path, index=False)
 
     demanda_insatisfecha_path = os.path.join(
-        base_dir, 'resultados', f'demanda_insatisfecha_CW_dia_{dia}.csv')
+        base_dir, 'resultados', f'dia_{dia}', f'demanda_insatisfecha_CW_dia_{dia}.csv')
+    if not os.path.exists(os.path.dirname(demanda_insatisfecha_path)):
+        os.makedirs(os.path.dirname(demanda_insatisfecha_path))
     demanda_insatisfecha.to_csv(demanda_insatisfecha_path, index=False)
-    return True
+
+    return df_resultados
 
 
-def graficar_rutas(path_resultados, path_zonas, dia):
+def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia):
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
-    data_resultados = pd.read_csv(path_resultados)
+    # data_resultados = pd.read_csv(path_resultados)
     data_zonas = pd.read_csv(path_zonas)
     data_zonas = data_zonas.drop(
         columns=[col for col in data_zonas.columns if "Unnamed" in col])
+
+    df = pd.read_csv(path_tiendas)
+    df['pos_x'] = df['pos_x'].astype(int)
+    df['pos_y'] = df['pos_y'].astype(int)
+    df['pos_x'] -= 1
+    df['pos_y'] -= 1
+
+    df_zonas = pd.read_csv(path_zonas)
 
     distancia_total = 0
     plt.figure(constrained_layout=True)
     for i, row in data_resultados.iterrows():
 
         rutas = row['rutas']
-        rutas = rutas.split("], [")
+        # rutas = rutas.split("], [")
         for i in range(len(rutas)):
-            rutas[i] = rutas[i].strip("[]").split(", ")
+            # rutas[i] = rutas[i].strip("[]").split(", ")
             for j in range(len(rutas[i])):
                 rutas[i][j] = int(rutas[i][j])
 
@@ -374,23 +388,12 @@ def graficar_rutas(path_resultados, path_zonas, dia):
             camion += 1
 
         distancia = row['distancia']
-        lista_distancia = distancia.strip("[]").split(",")
-        for i in range(len(lista_distancia)):
-            distancia_total += float(lista_distancia[i])
+        # lista_distancia = distancia.strip("[]").split(",")
+        for i in range(len(distancia)):
+            distancia_total += float(distancia[i])
         print(f"Distancia recorrida para la tienda {camion}: {distancia}")
 
     # ---------- Mapa de tiendas de entrega 1 ---------- #
-
-    path_tiendas = os.path.join(
-        base_dir, '..', '..', 'Datos', 'tiendas_20250115.csv')
-    df = pd.read_csv(path_tiendas)
-    df['pos_x'] = df['pos_x'].astype(int)
-    df['pos_y'] = df['pos_y'].astype(int)
-    df['pos_x'] -= 1
-    df['pos_y'] -= 1
-    path_zonas = os.path.join(
-        base_dir, '..', '..', 'Datos', 'zonas_20250115.csv')
-    df_zonas = pd.read_csv(path_zonas)
 
     largo_x = max(df_zonas['x_zona'])
     largo_y = max(df_zonas['y_zona'])
@@ -445,14 +448,20 @@ def graficar_rutas(path_resultados, path_zonas, dia):
     im = plt.imshow(grilla_indices,  cmap=color_map,
                     norm=norm, zorder=1, alpha=0.5)
 
+    if not os.path.exists(os.path.join(base_dir, 'resultados', f'dia_{dia}' 'graficos_CW')):
+        os.makedirs(os.path.join(base_dir, 'resultados',
+                    f'dia_{dia}', 'graficos_CW'))
+
     plt.savefig(os.path.join(
-        base_dir, 'resultados', 'graficos_CW', f'rutas_camiones_todas_las_tiendas_CW_dia_{dia}.png'))
-    # plt.show()
+        base_dir, 'resultados', f'dia_{dia}', 'graficos_CW', f'rutas_camiones_todas_las_tiendas_CW_dia_{dia}.png'))
+    plt.show()
     print(
         f"Distancia total recorrida por todos los camiones en el día {dia}: {distancia_total} unidades")
     df_distancia_total = pd.DataFrame(
         {'distancia_total': [distancia_total]}
     )
+
     df_distancia_total.to_csv(os.path.join(
-        base_dir, 'resultados', 'graficos_CW', f'distancia_total_CW_dia_{dia}.csv'), index=False)
+        base_dir, 'resultados', f'dia_{dia}', f'distancia_total_CW_dia_{dia}.csv'), index=False)
+
     return True
