@@ -448,7 +448,7 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia):
     im = plt.imshow(grilla_indices,  cmap=color_map,
                     norm=norm, zorder=1, alpha=0.5)
 
-    if not os.path.exists(os.path.join(base_dir, 'resultados', f'dia_{dia}' 'graficos_CW')):
+    if not os.path.exists(os.path.dirname(os.path.join(base_dir, 'resultados', f'dia_{dia}' 'graficos_CW'))):
         os.makedirs(os.path.join(base_dir, 'resultados',
                     f'dia_{dia}', 'graficos_CW'))
 
