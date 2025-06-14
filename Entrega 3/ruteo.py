@@ -348,7 +348,7 @@ def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_ca
     return df_resultados
 
 
-def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia):
+def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=False):
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     # data_resultados = pd.read_csv(path_resultados)
@@ -412,7 +412,10 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia):
     plt.scatter(tiendas_grandes['pos_x'], tiendas_grandes['pos_y'],
                 c='red', marker='o', label='Tienda grande', zorder=3)
 
-    plt.title('Rutas de Camiones - Clarke and Wright')
+    if mejora_2_opt:
+        plt.title('Rutas de Camiones - Clarke and Wright mejoradas con 2-opt')
+    else:
+        plt.title('Rutas de Camiones - Clarke and Wright')
     plt.xlabel('Coordenada X')
     plt.ylabel('Coordenada Y')
     plt.grid(True, linestyle="--", alpha=0.5)
@@ -448,20 +451,116 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia):
     im = plt.imshow(grilla_indices,  cmap=color_map,
                     norm=norm, zorder=1, alpha=0.5)
 
-    if not os.path.exists(os.path.dirname(os.path.join(base_dir, 'resultados', f'dia_{dia}', 'graficos_CW'))):
-        os.makedirs(os.path.join(base_dir, 'resultados',
-                    f'dia_{dia}', 'graficos_CW'))
+    output_dir = os.path.join(base_dir, 'resultados',
+                              f'dia_{dia}', 'graficos_CW')
+    os.makedirs(output_dir, exist_ok=True)
 
-    plt.savefig(os.path.join(
-        base_dir, 'resultados', f'dia_{dia}', 'graficos_CW', f'rutas_camiones_todas_las_tiendas_CW_dia_{dia}.png'))
-    plt.show()
+    nombre_archivo = f'rutas_camiones_todas_las_tiendas_CW_mejoradas_2opt_dia_{dia}.png' if mejora_2_opt \
+        else f'rutas_camiones_todas_las_tiendas_CW_dia_{dia}.png'
+
+    plt.savefig(os.path.join(output_dir, nombre_archivo))
+    # plt.show()
     print(
         f"Distancia total recorrida por todos los camiones en el día {dia}: {distancia_total} unidades")
     df_distancia_total = pd.DataFrame(
         {'distancia_total': [distancia_total]}
     )
+    if not os.path.exists(os.path.join(base_dir, 'resultados', f'dia_{dia}')):
+        os.makedirs(os.path.join(base_dir, 'resultados', f'dia_{dia}'))
 
-    df_distancia_total.to_csv(os.path.join(
-        base_dir, 'resultados', f'dia_{dia}', f'distancia_total_CW_dia_{dia}.csv'), index=False)
+    if not mejora_2_opt:
+        df_distancia_total.to_csv(os.path.join(
+            base_dir, 'resultados', f'dia_{dia}', f'distancia_total_CW_dia_{dia}.csv'), index=False)
+    else:
+        df_distancia_total.to_csv(os.path.join(
+            base_dir, 'resultados', f'dia_{dia}', f'distancia_total_mejorada_CW_dia_{dia}.csv'), index=False)
 
     return True
+
+
+def dos_opt_swap(lista_ruta, first, second):
+    """
+    Realiza un swap de dos nodos en la ruta.
+    """
+    nueva_ruta = lista_ruta.copy()
+    nueva_ruta = lista_ruta[:first] + \
+        lista_ruta[first:second+1][::-1] + lista_ruta[second+1:]
+    return nueva_ruta
+
+
+def calcular_distancia_ruta(ruta, dist_df):
+    """
+    Calcula la distancia total de una ruta dada.
+    """
+    distancia_total = 0
+    for i in range(len(ruta) - 1):
+        distancia_total += dist_df.loc[ruta[i], ruta[i + 1]]
+    return distancia_total
+
+
+def mejora_2_opt_ruta(ruta, dist_df):
+    # adaptado de https://slowandsteadybrain.medium.com/traveling-salesman-problem-ce78187cf1f3
+    nueva_distancia = float('inf')
+    mejor_distancia = calcular_distancia_ruta(ruta, dist_df)
+    ruta_actual = ruta.copy()
+    for i in range(1, len(ruta) - 2):    # Para no hacer swap con el depósito
+        for j in range(i + 1, len(ruta)-1):
+            if j - i == 1:
+                continue
+            nueva_ruta = dos_opt_swap(ruta_actual, i, j)
+            nueva_distancia = calcular_distancia_ruta(nueva_ruta, dist_df)
+            if nueva_distancia < mejor_distancia:
+                print(
+                    f'nueva mejor distancia: {nueva_distancia}, mejor distancia anterior: {mejor_distancia}')
+                mejor_distancia = nueva_distancia
+                ruta_actual = nueva_ruta
+    return {'ruta_mejorada': ruta_actual, 'distancia': mejor_distancia}
+
+
+def mejorar_rutas_2_opt(data_resultados, path_zonas, path_tiendas, dia):
+    print("Mejorando rutas con 2-opt...")
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    data_zonas = pd.read_csv(path_zonas)
+    data_tiendas = pd.read_csv(path_tiendas)
+
+    coords_zonas = data_zonas[['x_zona', 'y_zona']].values
+    dist_matrix = cdist(coords_zonas, coords_zonas, metric='euclidean')
+
+    # Se calcula la matríz de distancias euclidianas entre solo zonas.
+    dist_df = pd.DataFrame(
+        dist_matrix,
+        index=data_zonas['id_zona'],
+        columns=data_zonas['id_zona']
+    )
+
+    data_resultados_mejorados = data_resultados.copy()
+
+    for i, row in data_resultados_mejorados.iterrows():
+        rutas = row['rutas']
+        print(f"Rutas originales para tienda {row['tienda']}: {rutas}")
+        nuevas_rutas = []
+        nuevas_distancias = []
+        for j in range(len(rutas)):
+            ruta_mejorada = mejora_2_opt_ruta(rutas[j], dist_df)
+            if ruta_mejorada['ruta_mejorada'] != rutas[j]:
+                print(
+                    f"Ruta mejorada para tienda {row['tienda']}: {ruta_mejorada['ruta_mejorada']}")
+                # Calcular distancia total de la ruta mejorada
+                print(
+                    f"Distancia total de la ruta mejorada: {ruta_mejorada['distancia']}")
+                print(f'Distancia anterior: {row["distancia"][j]}')
+            else:
+                print(
+                    f"No se mejoró la ruta para tienda {row['tienda']}: {ruta_mejorada}")
+            nuevas_rutas.append(ruta_mejorada['ruta_mejorada'])
+            nuevas_distancias.append(ruta_mejorada['distancia'])
+        data_resultados_mejorados.at[i, 'rutas'] = nuevas_rutas
+        data_resultados_mejorados.at[i, 'distancia'] = nuevas_distancias
+    output_path = os.path.join(
+        base_dir, 'resultados', f'dia_{dia}', f'resultados_mejorados_CW_dia_{dia}.csv')
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
+    data_resultados_mejorados.to_csv(output_path, index=False)
+
+    return data_resultados_mejorados
