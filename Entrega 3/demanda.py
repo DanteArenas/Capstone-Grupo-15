@@ -1,9 +1,12 @@
+from scipy.stats import norm, lognorm, gamma, poisson
 import matplotlib.pyplot as plt
 import pandas as pd
 import numpy as np
 import os
 
 # Función para cargar ventas
+
+
 def cargar_ventas(ruta_base):
     ventas = []
     for dia in range(1, 41):
@@ -14,30 +17,43 @@ def cargar_ventas(ruta_base):
             ventas.append(df)
     return pd.concat(ventas, ignore_index=True)
 
+
 # Carga de datos únicos
-flota = pd.read_csv('flota_20250115.csv')
-productos = pd.read_csv('productos_20250115.csv')
-proporcion_eleccion = pd.read_csv('proporcion_eleccion_de_usuarios_20250115.csv')
-#demanda_insatisfecha = pd.read_csv('demanda_online_insatisfecha_20250115.csv')
-reorden = pd.read_csv('reorden_20250115.csv')
-tiendas = pd.read_csv('tiendas_20250115.csv')
-vehiculos = pd.read_csv('vehiculos_20250115.csv')
-zonas = pd.read_csv('zonas_20250115.csv')
+base_dir = os.path.dirname(os.path.abspath(__file__))
+path_flota = os.path.join(base_dir, '..', 'Datos', 'flota_20250115.csv')
+path_productos = os.path.join(
+    base_dir, '..', 'Datos', 'productos_20250115.csv')
+path_proporcion_eleccion = os.path.join(
+    base_dir, '..', 'Datos', 'proporcion_eleccion_de_usuarios_20250115.csv')
+path_reorden = os.path.join(base_dir, '..', 'Datos', 'reorden_20250115.csv')
+path_tiendas = os.path.join(base_dir, '..', 'Datos', 'tiendas_20250115.csv')
+path_vehiculos = os.path.join(
+    base_dir, '..', 'Datos', 'vehiculos_20250115.csv')
+path_zonas = os.path.join(base_dir, '..', 'Datos', 'zonas_20250115.csv')
+
+flota = pd.read_csv(path_flota)
+productos = pd.read_csv(path_productos)
+# Proporción de elección de usuarios
+proporcion_eleccion = pd.read_csv(path_proporcion_eleccion)
+# demanda_insatisfecha = pd.read_csv('demanda_online_insatisfecha_20250115.csv')
+reorden = pd.read_csv(path_reorden)
+tiendas = pd.read_csv(path_tiendas)
+vehiculos = pd.read_csv(path_vehiculos)
+zonas = pd.read_csv(path_zonas)
 
 # Carga de ventas físicas y digitales
-ventas_tienda = cargar_ventas('venta_tienda')
+ventas_tienda = cargar_ventas(os.path.join(
+    base_dir, '..', 'Datos', 'venta_tienda'))
 ventas_tienda.rename(columns={'venta_tienda': 'cantidad'}, inplace=True)
 
-ventas_zona = cargar_ventas('venta_zona')
+ventas_zona = cargar_ventas(os.path.join(
+    base_dir, '..', 'Datos', 'venta_zona'))
 ventas_zona.rename(columns={'venta_digital': 'cantidad'}, inplace=True)
 
 costo_inventario_unitario = 3.733
 
-#Generar resumen tiendas con parametros
+# Generar resumen tiendas con parametros
 
-from scipy.stats import norm, lognorm, gamma, poisson
-import numpy as np
-import pandas as pd
 
 # === 1. Usar SOLO ventas físicas ===
 ventas_fisicas = ventas_tienda[['id_producto', 'cantidad']]
@@ -98,7 +114,9 @@ for id_producto, grupo in ventas_fisicas.groupby("id_producto"):
 df_param_tienda = pd.DataFrame(parametros_tienda)
 
 # === 3. Fusionar con archivo resumen original (para tomar el mejor ajuste) ===
-resumen_tienda = pd.read_excel('resumen_tiendas.xlsx')
+ruta_resumen_tiendas = os.path.join(
+    base_dir, '..', 'Datos', 'analisis de datos', 'resumen_tiendas.xlsx')
+resumen_tienda = pd.read_excel(ruta_resumen_tiendas)
 
 df_tienda_completo = resumen_tienda.merge(
     df_param_tienda,
@@ -112,7 +130,7 @@ df_tienda_completo.drop(columns=['distribucion'], inplace=True)
 # === 4. Guardar Excel final ===
 df_tienda_completo.to_excel('resumen_tiendas_con_parametros.xlsx', index=False)
 
-#Generar resumen zonas con parametros:
+# Generar resumen zonas con parametros:
 
 # === 1. Ajuste sobre ventas digitales (zonas) ===
 parametros_zona = []
@@ -123,7 +141,8 @@ for id_producto, grupo in ventas_zona.groupby("id_producto"):
 
     # Normal
     mu, sigma = norm.fit(cantidades)
-    parametros_zona.append({'id_producto': id_producto, 'distribucion': 'Normal', 'parametro1': mu, 'parametro2': sigma})
+    parametros_zona.append({'id_producto': id_producto,
+                           'distribucion': 'Normal', 'parametro1': mu, 'parametro2': sigma})
 
     # Log-Normal
     if len(positivas) > 0:
@@ -155,12 +174,15 @@ for id_producto, grupo in ventas_zona.groupby("id_producto"):
 
     # Poisson
     lambda_p = cantidades.mean()
-    parametros_zona.append({'id_producto': id_producto, 'distribucion': 'Poisson', 'parametro1': lambda_p, 'parametro2': None})
+    parametros_zona.append({'id_producto': id_producto, 'distribucion': 'Poisson',
+                           'parametro1': lambda_p, 'parametro2': None})
 
 df_param_zona = pd.DataFrame(parametros_zona)
 
 # === 2. Fusionar con el resumen original de zonas
-resumen_zona = pd.read_excel('resumen_zonas.xlsx')
+ruta_resumen_zonas = os.path.join(
+    base_dir, '..', 'Datos', 'analisis de datos', 'resumen_zonas.xlsx')
+resumen_zona = pd.read_excel(ruta_resumen_zonas)
 
 df_zona_completo = resumen_zona.merge(
     df_param_zona,
@@ -175,16 +197,13 @@ df_zona_completo.drop(columns=['distribucion'], inplace=True)
 df_zona_completo.to_excel('resumen_zonas_con_parametros.xlsx', index=False)
 
 
-#GENERAR DEMANDA
+# GENERAR DEMANDA
 
-import pandas as pd
-import numpy as np
-from scipy.stats import norm, lognorm, gamma, poisson
-import os
 
 # Leer los parámetros por producto
 resumen_zonas_con_param = pd.read_excel('resumen_zonas_con_parametros.xlsx')
 resumen_zonas_con_param.set_index('id_producto', inplace=True)
+
 
 def generar_variacion_estocastica(distribucion, param1, param2=None):
     """
@@ -222,9 +241,11 @@ def generar_variacion_estocastica(distribucion, param1, param2=None):
     else:
         return 0
 
-#DEMANDA DIGITAL
+# DEMANDA DIGITAL
 
 # === FUNCIÓN PRINCIPAL PARA UN DÍA ===
+
+
 def generar_demanda_digital_estocastica(ventas_zona_dia):
     demanda_estocastica = []
 
@@ -239,7 +260,8 @@ def generar_demanda_digital_estocastica(ventas_zona_dia):
             fila = resumen_zonas_con_param.loc[id_producto]
             dist = fila['mejor_ajuste']
             p1 = fila['parametro1']
-            p2 = fila['parametro2'] if not pd.isna(fila['parametro2']) else None
+            p2 = fila['parametro2'] if not pd.isna(
+                fila['parametro2']) else None
             variacion = generar_variacion_estocastica(dist, p1, p2)
             total = max(0, int(base + variacion))
 
@@ -251,15 +273,13 @@ def generar_demanda_digital_estocastica(ventas_zona_dia):
 
     return pd.DataFrame(demanda_estocastica)
 
-#Generar demanda digital para los 40 días
+# Generar demanda digital para los 40 días
 
-import os
-import pandas as pd
 
 def generar_ventas_zona_estocasticas(ruta_base_original='venta_zona', carpeta_salida='ventas_zona_estocasticas', dias=40):
     """
     Genera archivos estocásticos tipo venta_zona_dia_X.csv en base a archivos de ventas digitales originales.
-    
+
     - ruta_base_original: nombre base de los archivos originales (sin _n_20250115.csv)
     - carpeta_salida: carpeta donde guardar los nuevos archivos
     - dias: cantidad de días a simular (por defecto: 40)
@@ -274,16 +294,16 @@ def generar_ventas_zona_estocasticas(ruta_base_original='venta_zona', carpeta_sa
             continue
 
         ventas_zona_dia = pd.read_csv(archivo_original)
-        ventas_zona_dia.rename(columns={'venta_digital': 'cantidad'}, inplace=True)
+        ventas_zona_dia.rename(
+            columns={'venta_digital': 'cantidad'}, inplace=True)
 
         # Aplicar variación estocástica
-        ventas_estocasticas = generar_demanda_digital_estocastica(ventas_zona_dia)
+        ventas_estocasticas = generar_demanda_digital_estocastica(
+            ventas_zona_dia)
 
         # Guardar archivo con el nuevo nombre
-        nombre_salida = os.path.join(carpeta_salida, f"venta_zona_dia_{dia}.csv")
+        nombre_salida = os.path.join(
+            carpeta_salida, f"venta_zona_dia_{dia}.csv")
         ventas_estocasticas.to_csv(nombre_salida, index=False)
 
         print(f"✅ Generado: {nombre_salida}")
-
-
-
