@@ -1,4 +1,4 @@
-from ruteo import generar_rutas, graficar_rutas
+from ruteo import generar_rutas, graficar_rutas, mejorar_rutas_2_opt
 import os
 
 # path_zonas, path_tiendas, path_venta_zona, path_flota, path_camiones, path_producto, dia
@@ -18,3 +18,8 @@ dia = 1
 data_resultados = generar_rutas(path_zonas, path_tiendas, path_venta_zona_1,
                                 path_flota, path_camiones, path_productos, dia)
 graficar_rutas(data_resultados, path_zonas, path_tiendas, dia)
+
+data_resultados = mejorar_rutas_2_opt(
+    data_resultados, path_zonas, path_tiendas, dia)
+graficar_rutas(data_resultados, path_zonas,
+               path_tiendas, dia, mejora_2_opt=True)
