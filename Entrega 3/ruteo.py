@@ -473,7 +473,7 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=
             base_dir, 'resultados', f'dia_{dia}', f'distancia_total_CW_dia_{dia}.csv'), index=False)
     else:
         df_distancia_total.to_csv(os.path.join(
-            base_dir, 'resultados', f'dia_{dia}', f'distancia_total_mejorada_CW_dia_{dia}.csv'), index=False)
+            base_dir, 'resultados', f'dia_{dia}', f'distancia_total_mejorada_2opt_CW_dia_{dia}.csv'), index=False)
 
     return True
 
