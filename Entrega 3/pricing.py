@@ -190,3 +190,118 @@ def resolver_precio_optimo(df_distancias_ordenado, beta=0.0152, theta=0.9, max_p
     df_precios_tienda_ruta['U_k (entero óptimo)'] = optimal_utils
 
     return df_precios_tienda_ruta
+
+import numpy as np
+import pandas as pd
+from sklearn.cluster import KMeans
+from pulp import LpProblem, LpVariable, lpSum, LpContinuous
+
+def resolver_precio_optimo_inv(df_distancias_ordenado, df_stock, df_demanda, df_zonas, beta=0.0152, theta=0.9, max_price=55.9, num_precios=100, P_LB=10, P_UB=50, M=1900000):
+    """
+    Recibe:
+    - df_distancias_ordenado: DataFrame con las columnas ['tienda', 'vehiculo', 'distancia', 'cluster_ordenado', 'n_k (total clientes)', 'centroide', 'c_k']
+    - df_stock: DataFrame con las columnas ['id_tienda', 'id_producto', 'reorden', 'stock_actual']
+    - Otros parámetros de la optimización como 'beta', 'theta', 'max_price', 'num_precios', 'P_LB', 'P_UB', 'M'
+    
+    Retorna:
+    - df_precios_tienda_ruta: DataFrame con las mismas columnas de entrada más las columnas 'p_k (entero óptimo)' y 'U_k (entero óptimo)'
+    """
+    # Verificar el nivel de inventario para cada tienda
+    df_distancias_ordenado['stock_actual'] = df_distancias_ordenado['tienda'].map(df_stock.set_index('id_tienda')['stock_actual'])
+    # Unimos df_zonas con df_demanda para agregar la tienda correspondiente a cada zona
+    df_merged = pd.merge(df_demanda, df_zonas[['id_zona', 'tienda_zona']], on='id_zona', how='left')
+
+    # Agrupar por 'tienda_zona' y sumar la 'venta_digital' para obtener la demanda total por tienda
+    df_demanda_por_tienda = df_merged.groupby('tienda_zona')['venta_digital'].sum().reset_index()
+
+    # Calcular I_UB como el 1.3% de la demanda total por tienda
+    df_demanda_por_tienda['I_UB'] = df_demanda_por_tienda['venta_digital'] * 1.3  # 1.3% de la demanda total por tienda
+
+    
+    # Crear los candidatos de precios
+    price_candidates = np.linspace(0, max_price, num_precios)
+    price_indices = list(range(len(price_candidates)))
+
+    # Crear el modelo de optimización
+    model = LpProblem("Maximizar_Utilidad_Por_Cluster", LpMaximize)
+
+    # Definir las variables binarias para las rutas y los precios
+    x = {
+        (k, i): LpVariable(f"x_{k}_{i}", cat='Binary')
+        for k in df_distancias_ordenado.index
+        for i in price_indices
+    }
+
+    # Variables para los precios óptimos por cluster
+    p_vars = {
+        k: LpVariable(f"p_{k}", lowBound=0, cat=LpContinuous)
+        for k in df_distancias_ordenado.index
+    }
+
+    # Definir la función objetivo
+    model += lpSum([
+        row['n_k (total clientes)'] * 
+        ((-beta * price_candidates[i] + theta) * 
+        (price_candidates[i] - row['c_k']) * x[(k, i)])
+        for k, row in df_distancias_ordenado.iterrows()
+        for i in price_indices
+    ])
+
+    # Restricciones para asegurar que cada ruta tenga exactamente un precio
+    for k in df_distancias_ordenado.index:
+        model += lpSum([x[(k, i)] for i in price_indices]) == 1
+
+    # Definir las restricciones para los precios óptimos
+    for k in df_distancias_ordenado.index:
+        model += p_vars[k] == lpSum([price_candidates[i] * x[(k, i)] for i in price_indices])
+
+    # Asegurarse de que el precio óptimo sea mayor o igual al c_k
+    for k, row in df_distancias_ordenado.iterrows():
+        model += p_vars[k] >= row['c_k']
+
+    # Restringir los precios para que sean no decrecientes entre clusters
+    cluster_indices = list(df_distancias_ordenado.index)
+    for k1, k2 in zip(cluster_indices, cluster_indices[1:]):
+        model += p_vars[k2] >= p_vars[k1]
+
+    # Verificar si el nivel de inventario es bajo
+    for k, row in df_distancias_ordenado.iterrows():
+        tienda = row['tienda']
+        stock_actual = row['stock_actual']
+
+        I_UB_tienda = df_demanda_por_tienda.loc[df_demanda_por_tienda['tienda_zona'] == tienda, 'I_UB'].values[0]
+
+        if stock_actual < I_UB_tienda:
+            # Añadir las restricciones si el nivel de inventario es bajo
+            W_i = LpVariable(f"W_{k}", cat='Binary')
+            Z_i = LpVariable(f"Z_{k}", cat='Binary')
+
+            # Restricciones de precios
+            model += p_vars[k] <= P_LB - (1 - W_i) * M
+            model += p_vars[k] >= P_UB - (1 - Z_i) * M
+            model += W_i + Z_i == 1
+
+    # Resolver el modelo
+    model.solve()
+
+    # Recopilar los precios óptimos y las utilidades para cada cluster
+    optimal_prices = []
+    optimal_utils = []
+
+    for k in df_distancias_ordenado.index:
+        selected_i = [i for i in price_indices if x[(k, i)].value() == 1][0]
+        p_opt = price_candidates[selected_i]
+        n_k = df_distancias_ordenado.loc[k, 'n_k (total clientes)']
+        c_k = df_distancias_ordenado.loc[k, 'c_k']
+        A_k = -beta * p_opt + theta
+        U_k = n_k * A_k * (p_opt - c_k)
+        optimal_prices.append(p_opt)
+        optimal_utils.append(U_k)
+
+    # Crear un nuevo DataFrame con los precios y utilidades óptimos
+    df_precios_tienda_ruta = df_distancias_ordenado.copy()
+    df_precios_tienda_ruta['p_k (entero óptimo)'] = optimal_prices
+    df_precios_tienda_ruta['U_k (entero óptimo)'] = optimal_utils
+
+    return df_precios_tienda_ruta
+
