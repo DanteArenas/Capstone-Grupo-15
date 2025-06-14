@@ -503,17 +503,24 @@ def mejora_2_opt_ruta(ruta, dist_df):
     nueva_distancia = float('inf')
     mejor_distancia = calcular_distancia_ruta(ruta, dist_df)
     ruta_actual = ruta.copy()
-    for i in range(1, len(ruta) - 2):    # Para no hacer swap con el depósito
-        for j in range(i + 1, len(ruta)-1):
-            if j - i == 1:
-                continue
-            nueva_ruta = dos_opt_swap(ruta_actual, i, j)
-            nueva_distancia = calcular_distancia_ruta(nueva_ruta, dist_df)
-            if nueva_distancia < mejor_distancia:
-                print(
-                    f'nueva mejor distancia: {nueva_distancia}, mejor distancia anterior: {mejor_distancia}')
-                mejor_distancia = nueva_distancia
-                ruta_actual = nueva_ruta
+    mejorado = True
+    while mejorado:
+        mejorado = False
+        for i in range(1, len(ruta) - 2):    # Para no hacer swap con el depósito
+            for j in range(i + 1, len(ruta)-1):
+                if j - i == 1:
+                    continue
+                nueva_ruta = dos_opt_swap(ruta_actual, i, j)
+                nueva_distancia = calcular_distancia_ruta(nueva_ruta, dist_df)
+                if nueva_distancia < mejor_distancia:
+                    print(
+                        f'nueva mejor distancia: {nueva_distancia}, mejor distancia anterior: {mejor_distancia}')
+                    mejor_distancia = nueva_distancia
+                    ruta_actual = nueva_ruta
+                    mejorado = True
+                    break
+            if mejorado:
+                break
     return {'ruta_mejorada': ruta_actual, 'distancia': mejor_distancia}
 
 
