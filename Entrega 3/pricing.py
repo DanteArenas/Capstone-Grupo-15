@@ -9,6 +9,7 @@ import ast
 from sklearn.cluster import KMeans
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, LpContinuous
 
+
 def cargar_datos_csv(path):
     return pd.read_csv(path)
 
@@ -24,7 +25,7 @@ def procesar_datos_de_distancia(df_resultados, n_clusters=3):
     df = df_resultados.copy()
 
     # Aseguramos que la columna 'distancia' sea una lista
-    df['distancia'] = df['distancia'].apply(ast.literal_eval)
+    # df['distancia'] = df['distancia'].apply(ast.literal_eval)
 
     distancias = []
     tiendas = []
@@ -56,12 +57,13 @@ def procesar_datos_de_distancia(df_resultados, n_clusters=3):
     for tienda in df_ordenado['tienda'].unique():
         # Filtrar por tienda
         tienda_data = df_ordenado[df_ordenado['tienda'] == tienda]
-        
+
         # Ajustar KMeans solo a las distancias de esa tienda
         kmeans_labels = kmeans.fit_predict(tienda_data[['distancia']])
 
         # Asignar el cluster a cada fila correspondiente a la tienda
-        df_ordenado.loc[df_ordenado['tienda'] == tienda, 'cluster'] = kmeans_labels
+        df_ordenado.loc[df_ordenado['tienda'] ==
+                        tienda, 'cluster'] = kmeans_labels
 
     # Reordenar los clusters
     centroids = kmeans.cluster_centers_.flatten()
@@ -71,6 +73,7 @@ def procesar_datos_de_distancia(df_resultados, n_clusters=3):
     df_ordenado['cluster_ordenado'] = df_ordenado['cluster'].map(label_map)
 
     return df_ordenado, kmeans
+
 
 def generar_matriz_ck(df_distancias_ordenado, df_cw):
     """
@@ -96,21 +99,26 @@ def generar_matriz_ck(df_distancias_ordenado, df_cw):
     df_distancias_ordenado['n_clientes_ruta'] = n_clientes_ruta
 
     # Calcular los centroides (promedio de distancia por cluster)
-    centroides_ordenados = df_distancias_ordenado.groupby('cluster_ordenado')['distancia'].mean().reset_index()
+    centroides_ordenados = df_distancias_ordenado.groupby(
+        'cluster_ordenado')['distancia'].mean().reset_index()
     centroides_ordenados.columns = ['cluster_ordenado', 'centroide']
 
     # Calcular el número total de clientes por cluster (nk)
-    nk_por_cluster = df_distancias_ordenado.groupby('cluster_ordenado')['n_clientes_ruta'].sum().reset_index()
+    nk_por_cluster = df_distancias_ordenado.groupby(
+        'cluster_ordenado')['n_clientes_ruta'].sum().reset_index()
     nk_por_cluster.columns = ['cluster_ordenado', 'n_k (total clientes)']
 
     # Unir los cálculos de n_k y centroide por cluster
-    nk_ck_cluster = pd.merge(nk_por_cluster, centroides_ordenados, on='cluster_ordenado')
+    nk_ck_cluster = pd.merge(
+        nk_por_cluster, centroides_ordenados, on='cluster_ordenado')
 
     # Calcular c_k
-    nk_ck_cluster['c_k'] = nk_ck_cluster['centroide'] / nk_ck_cluster['n_k (total clientes)']
+    nk_ck_cluster['c_k'] = nk_ck_cluster['centroide'] / \
+        nk_ck_cluster['n_k (total clientes)']
 
     # Agregar las columnas de c_k y n_k al df_ordenado original
-    df_distancias_ordenado = pd.merge(df_distancias_ordenado, nk_ck_cluster[['cluster_ordenado', 'n_k (total clientes)', 'centroide', 'c_k']], on='cluster_ordenado')
+    df_distancias_ordenado = pd.merge(df_distancias_ordenado, nk_ck_cluster[[
+                                      'cluster_ordenado', 'n_k (total clientes)', 'centroide', 'c_k']], on='cluster_ordenado')
 
     return df_distancias_ordenado
 
@@ -119,7 +127,7 @@ def resolver_precio_optimo(df_distancias_ordenado, beta=0.0152, theta=0.9, max_p
     """
     Recibe:
     - df_distancias_ordenado: DataFrame con las columnas ['tienda', 'vehiculo', 'distancia', 'cluster_ordenado', 'n_k (total clientes)', 'centroide', 'c_k']
-    
+
     Retorna:
     - df_precios_tienda_ruta: DataFrame con las mismas columnas de entrada más las columnas 'p_k (entero óptimo)' y 'U_k (entero óptimo)'
     """
@@ -157,7 +165,8 @@ def resolver_precio_optimo(df_distancias_ordenado, beta=0.0152, theta=0.9, max_p
 
     # Definir las restricciones para los precios óptimos
     for k in df_distancias_ordenado.index:
-        model += p_vars[k] == lpSum([price_candidates[i] * x[(k, i)] for i in price_indices])
+        model += p_vars[k] == lpSum([price_candidates[i] * x[(k, i)]
+                                    for i in price_indices])
 
     # Asegurarse de que el precio óptimo sea mayor o igual al c_k
     for k, row in df_distancias_ordenado.iterrows():

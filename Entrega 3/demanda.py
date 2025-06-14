@@ -307,3 +307,8 @@ def generar_ventas_zona_estocasticas(ruta_base_original='venta_zona', carpeta_sa
         ventas_estocasticas.to_csv(nombre_salida, index=False)
 
         print(f"✅ Generado: {nombre_salida}")
+
+
+ruta_base_original = os.path.join(
+    base_dir, '..', 'Datos', 'venta_zona')
+generar_ventas_zona_estocasticas(ruta_base_original=ruta_base_original)
