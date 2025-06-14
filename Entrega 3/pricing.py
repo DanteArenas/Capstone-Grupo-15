@@ -9,70 +9,60 @@ import ast
 from sklearn.cluster import KMeans
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, LpContinuous
 
-
-def cargar_datos_csv(path):
-    return pd.read_csv(path)
-
-
 def procesar_datos_de_distancia(df_resultados, n_clusters=3):
     """
     Recibe:
     - df_resultados: DataFrame con columnas ['tienda', 'rutas', 'carga', 'distancia', 'carga_total', 'n_camiones_utilizados', 'n_camiones_disponibles']
+    
     Retorna:
     - df_ordenado: DataFrame con columnas ['tienda', 'vehiculo', 'distancia', 'cluster_ordenado']
     - kmeans: modelo KMeans entrenado
     """
     df = df_resultados.copy()
 
-    # Aseguramos que la columna 'distancia' sea una lista
-    # df['distancia'] = df['distancia'].apply(ast.literal_eval)
-
+    # Inicializar listas para las distancias, tiendas y vehículos
     distancias = []
     tiendas = []
     vehiculos = []
 
-    # Agrupar por tienda y vehículo para procesar las distancias
-    for _, row in df.iterrows():
+    # Recorremos cada fila y extraemos los elementos de la lista de distancias
+    for i, row in df.iterrows():
         tienda = row['tienda']
-        for j, dist in enumerate(row['distancia']):
-            distancias.append(float(dist))
+        dist_list = row['distancia']  # Ya es una lista de distancias
+        for j, dist in enumerate(dist_list):
+            distancias.append(float(dist))  # Convertimos a float si es necesario
             tiendas.append(tienda)
-            vehiculos.append(j)
+            vehiculos.append(j)  # El índice de la ruta como identificador del vehículo
 
-    # Crear DataFrame con las distancias, tiendasy vehículos
-    df_dist = pd.DataFrame({
+    # Creamos el DataFrame con distancias, tiendas y vehículos
+    df_distancias = pd.DataFrame({
         'tienda': tiendas,
         'vehiculo': vehiculos,
         'distancia': distancias
     })
 
-    # Ordenar los datos por distancia
-    df_ordenado = df_dist.sort_values(by='distancia').reset_index(drop=True)
+    # Ordenamos las distancias para hacer el clustering
+    df_distancias_ordenado = df_distancias.sort_values(by='distancia').reset_index(drop=True)
 
-    # Crear el modelo KMeans, agrupar por tienda y vehículo
-    kmeans = KMeans(n_clusters=n_clusters, random_state=0, n_init='auto')
+    # Utilizamos la columna 'distancia' del DataFrame ordenado para aplicar KMeans
+    dist_array = df_distancias_ordenado['distancia'].values.reshape(-1, 1)
 
-    # Realizar clustering por tienda y vehículo (se debe hacer para cada tienda)
-    df_ordenado['cluster'] = -1  # Inicializar columna para los clusters
-    for tienda in df_ordenado['tienda'].unique():
-        # Filtrar por tienda
-        tienda_data = df_ordenado[df_ordenado['tienda'] == tienda]
+    # Clustering con KMeans sobre las distancias
+    kmeans = KMeans(n_clusters=n_clusters, n_init=10, random_state=42)
+    cluster_labels = kmeans.fit_predict(dist_array)
 
-        # Ajustar KMeans solo a las distancias de esa tienda
-        kmeans_labels = kmeans.fit_predict(tienda_data[['distancia']])
-
-        # Asignar el cluster a cada fila correspondiente a la tienda
-        df_ordenado.loc[df_ordenado['tienda'] ==
-                        tienda, 'cluster'] = kmeans_labels
-
-    # Reordenar los clusters
+    # Reordenamos los centroides y reasignamos etiquetas para que el cluster 0 tenga las distancias más bajas
     centroids = kmeans.cluster_centers_.flatten()
     sorted_indices = np.argsort(centroids)
     label_map = {original: new for new, original in enumerate(sorted_indices)}
 
-    df_ordenado['cluster_ordenado'] = df_ordenado['cluster'].map(label_map)
+    # Aplicamos el nuevo etiquetado
+    df_distancias_ordenado['cluster'] = cluster_labels
+    df_distancias_ordenado['cluster_ordenado'] = df_distancias_ordenado['cluster'].map(label_map)
 
-    return df_ordenado, kmeans
+    return df_distancias_ordenado, kmeans
+
+
 
 
 def generar_matriz_ck(df_distancias_ordenado, df_cw):
@@ -84,7 +74,6 @@ def generar_matriz_ck(df_distancias_ordenado, df_cw):
     - df_ordenado: DataFrame con columnas ['tienda', 'vehiculo', 'distancia', 'cluster_ordenado', 'n_k (total clientes)', 'centroide', 'c_k']
     """
     df_cw = df_cw.copy()
-    df_cw['rutas'] = df_cw['rutas'].apply(ast.literal_eval)
 
     n_clientes_ruta = []
     # Calcular el número de clientes por ruta en cada tienda y vehículo

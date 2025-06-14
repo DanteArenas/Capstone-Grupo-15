@@ -23,13 +23,14 @@ for dia in range(1, 4):
     graficar_rutas(data_resultados, path_zonas, path_tiendas, dia)
 
     # Cargar datos de distancia
-    df_distancias_ordenada = procesar_datos_de_distancia(data_resultados)
+    df_distancias_ordenada, kmeans = procesar_datos_de_distancia(data_resultados)
 
-    # Generar matriz Ck
+    # Generar matriz ck
     matriz_ck = generar_matriz_ck(df_distancias_ordenada, data_resultados)
 
-    # Resolver el precio óptimo
+    # Resolver precio óptimo
     df_precios_optimos = resolver_precio_optimo(matriz_ck)
 
+    # Guardar resultados
     path_resultados = os.path.join(
         base_dir, 'resultados', f'dia_{dia}', f'resultados_dia_{dia}.csv')
