@@ -211,23 +211,28 @@ def generar_variacion_estocastica_2(distribucion, param1, param2=None):
         return 1.0
 
     if distribucion == "Poisson":
-        variacion = np.random.poisson(lam=param1) / param1 if param1 > 0 else 1.0
+        variacion = np.random.poisson(
+            lam=param1) / param1 if param1 > 0 else 1.0
     elif distribucion == "Normal":
         if param2 is None or param2 <= 0:
             return 1.0
-        variacion = np.random.normal(loc=param1, scale=param2) / param1 if param1 > 0 else 1.0
+        variacion = np.random.normal(
+            loc=param1, scale=param2) / param1 if param1 > 0 else 1.0
     elif distribucion == "Uniforme":
         if param2 is None:
             return 1.0
-        variacion = np.random.uniform(low=param1, high=param2) / ((param1 + param2) / 2)
+        variacion = np.random.uniform(
+            low=param1, high=param2) / ((param1 + param2) / 2)
     elif distribucion in ["Log-Normal", "LogNormal"]:
         if param2 is None or param2 <= 0:
             return 1.0
-        variacion = np.random.lognormal(mean=param1, sigma=param2) / np.exp(param1)
+        variacion = np.random.lognormal(
+            mean=param1, sigma=param2) / np.exp(param1)
     elif distribucion == "Gamma":
         if param2 is None or param2 <= 0:
             return 1.0
-        variacion = np.random.gamma(shape=param1, scale=param2) / (param1 * param2)
+        variacion = np.random.gamma(
+            shape=param1, scale=param2) / (param1 * param2)
     else:
         return 1.0  # Distribución desconocida
 
@@ -255,8 +260,10 @@ def generar_demanda_digital_estocastica_2(ventas_zona_dia, resumen_parametros):
             fila = resumen_parametros.loc[id_producto]
             dist = fila['mejor_ajuste']
             p1 = fila['parametro1']
-            p2 = fila['parametro2'] if not pd.isna(fila['parametro2']) else None
-            variacion = generar_variacion_estocastica_2(dist, p1, p2)  # <- usa la nueva
+            p2 = fila['parametro2'] if not pd.isna(
+                fila['parametro2']) else None
+            variacion = generar_variacion_estocastica_2(
+                dist, p1, p2)  # <- usa la nueva
             total = max(0, int(base * variacion))
 
         demanda_estocastica.append({
@@ -268,11 +275,15 @@ def generar_demanda_digital_estocastica_2(ventas_zona_dia, resumen_parametros):
     return pd.DataFrame(demanda_estocastica)
 
 # Función principal para generar los 40 archivos CSV
-def generar_csvs_demanda_digital_estocastica_2(ruta_base='venta_zona', carpeta_salida='ventas_digitales_estocasticas', resumen_parametros_path='resumen_zonas_con_parametros.xlsx'):
+
+
+def generar_csvs_demanda_digital_estocastica_2(ruta_base=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'Datos', 'venta_zona'), carpeta_salida='ventas_digitales_estocasticas', resumen_parametros_path='resumen_zonas_con_parametros.xlsx'):
+    tiempo_inicio = pd.Timestamp.now()
     if not os.path.exists(carpeta_salida):
         os.makedirs(carpeta_salida)
 
-    resumen_parametros = pd.read_excel(resumen_parametros_path).set_index('id_producto')
+    resumen_parametros = pd.read_excel(
+        resumen_parametros_path).set_index('id_producto')
 
     for dia in range(1, 41):
         archivo_original = f"{ruta_base}_{dia}_20250115.csv"
@@ -281,9 +292,14 @@ def generar_csvs_demanda_digital_estocastica_2(ruta_base='venta_zona', carpeta_s
             continue
 
         ventas_zona_dia = pd.read_csv(archivo_original)
-        df_estocastico = generar_demanda_digital_estocastica_2(ventas_zona_dia, resumen_parametros)
-        nombre_salida = os.path.join(carpeta_salida, f"venta_zona_estocastica_dia_{dia}.csv")
+        df_estocastico = generar_demanda_digital_estocastica_2(
+            ventas_zona_dia, resumen_parametros)
+        nombre_salida = os.path.join(
+            carpeta_salida, f"venta_zona_estocastica_dia_{dia}.csv")
         df_estocastico.to_csv(nombre_salida, index=False)
         print(f"✅ Guardado: {nombre_salida}")
+    tiempo_fin = pd.Timestamp.now()
+    print(f"⏱️ Tiempo total: {tiempo_fin - tiempo_inicio}")
+
 
 generar_csvs_demanda_digital_estocastica_2()
