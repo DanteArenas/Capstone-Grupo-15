@@ -321,7 +321,7 @@ def resolver_precio_optimo_zona(df_distancias_ordenado, df_stock, df_demanda, df
     - Otros parámetros de optimización como 'beta', 'theta', 'max_price', 'num_precios', 'P_LB', 'P_UB', 'M'
     
     Retorna:
-    - df_precios_tienda_zona: DataFrame con el precio promedio por zona y las columnas solicitadas
+    - df_precios_tienda_zona: DataFrame con ['id_zona', 'distancia', 'cluster_ordenado', 'n_clientes_ruta', 'n_k (total clientes)', 'centroide', 'c_k', 'p_k (entero óptimo)', 'U_k (entero óptimo)']
     """
     
     # Paso 1: Unir df_demanda con df_zonas para obtener la tienda correspondiente a cada zona
