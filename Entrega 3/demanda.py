@@ -200,70 +200,71 @@ df_zona_completo.to_excel('resumen_zonas_con_parametros.xlsx', index=False)
 # GENERAR DEMANDA
 
 
-# Leer los parámetros por producto
-resumen_zonas_con_param = pd.read_excel('resumen_zonas_con_parametros.xlsx')
-resumen_zonas_con_param.set_index('id_producto', inplace=True)
-
-
-def generar_variacion_estocastica(distribucion, param1, param2=None):
+# Función actualizada: generación de variación estocástica acotada como factor multiplicador
+def generar_variacion_estocastica_2(distribucion, param1, param2=None):
     """
-    Genera una variación estocástica según la distribución especificada.
+    Genera un factor multiplicador estocástico entre ~0.7 y ~1.3
+    según la distribución ajustada del producto.
     """
+    # Si los parámetros son inválidos o faltantes, retornar 1.0 (sin variación)
     if pd.isna(param1) or (param2 is not None and pd.isna(param2)):
-        return 0
+        return 1.0
 
-    if distribucion == 'Poisson':
-        return np.random.poisson(lam=param1)
-
-    elif distribucion == 'Normal':
+    if distribucion == "Poisson":
+        variacion = np.random.poisson(
+            lam=param1) / param1 if param1 > 0 else 1.0
+    elif distribucion == "Normal":
+        if param2 is None or param2 <= 0:
+            return 1.0
+        variacion = np.random.normal(
+            loc=param1, scale=param2) / param1 if param1 > 0 else 1.0
+    elif distribucion == "Uniforme":
         if param2 is None:
-            return 0
-        return max(0, int(np.random.normal(loc=param1, scale=param2)))
-
-    elif distribucion == 'Uniforme':
-        if param2 is None:
-            return 0
-        return np.random.randint(int(param1), int(param2) + 1)
-
-    elif distribucion in ['Log-Normal', 'LogNormal']:
-        if param2 is None:
-            return 0
-        return max(0, int(np.random.lognormal(mean=param1, sigma=param2)))
-
-    elif distribucion == 'Gamma':
-        if param2 is None:
-            return 0
-        return max(0, int(np.random.gamma(shape=param1, scale=param2)))
-
-    elif distribucion == 'Constante':
-        return int(param1)
-
+            return 1.0
+        variacion = np.random.uniform(
+            low=param1, high=param2) / ((param1 + param2) / 2)
+    elif distribucion in ["Log-Normal", "LogNormal"]:
+        if param2 is None or param2 <= 0:
+            return 1.0
+        variacion = np.random.lognormal(
+            mean=param1, sigma=param2) / np.exp(param1)
+    elif distribucion == "Gamma":
+        if param2 is None or param2 <= 0:
+            return 1.0
+        variacion = np.random.gamma(
+            shape=param1, scale=param2) / (param1 * param2)
     else:
-        return 0
+        return 1.0  # Distribución desconocida
 
-# DEMANDA DIGITAL
+    # Acotar la variación para evitar valores extremos
+    variacion = max(0.7, min(variacion, 1.3))
 
-# === FUNCIÓN PRINCIPAL PARA UN DÍA ===
+    return variacion
 
 
-def generar_demanda_digital_estocastica(ventas_zona_dia):
+def generar_demanda_digital_estocastica_2(ventas_zona_dia, resumen_parametros):
+    """
+    Genera demanda digital estocástica para un DataFrame diario de ventas por zona,
+    aplicando un factor multiplicador acotado según la distribución ajustada.
+    """
     demanda_estocastica = []
 
     for _, row in ventas_zona_dia.iterrows():
         id_zona = row['id_zona']
         id_producto = row['id_producto']
-        base = row['cantidad']
+        base = row['venta_digital']
 
-        if id_producto not in resumen_zonas_con_param.index:
+        if id_producto not in resumen_parametros.index:
             total = base
         else:
-            fila = resumen_zonas_con_param.loc[id_producto]
+            fila = resumen_parametros.loc[id_producto]
             dist = fila['mejor_ajuste']
             p1 = fila['parametro1']
             p2 = fila['parametro2'] if not pd.isna(
                 fila['parametro2']) else None
-            variacion = generar_variacion_estocastica(dist, p1, p2)
-            total = max(0, int(base + variacion))
+            variacion = generar_variacion_estocastica_2(
+                dist, p1, p2)  # <- usa la nueva
+            total = max(0, int(base * variacion))
 
         demanda_estocastica.append({
             'id_zona': id_zona,
@@ -273,42 +274,32 @@ def generar_demanda_digital_estocastica(ventas_zona_dia):
 
     return pd.DataFrame(demanda_estocastica)
 
-# Generar demanda digital para los 40 días
+# Función principal para generar los 40 archivos CSV
 
 
-def generar_ventas_zona_estocasticas(ruta_base_original='venta_zona', carpeta_salida='ventas_zona_estocasticas', dias=40):
-    """
-    Genera archivos estocásticos tipo venta_zona_dia_X.csv en base a archivos de ventas digitales originales.
-
-    - ruta_base_original: nombre base de los archivos originales (sin _n_20250115.csv)
-    - carpeta_salida: carpeta donde guardar los nuevos archivos
-    - dias: cantidad de días a simular (por defecto: 40)
-    """
+def generar_csvs_demanda_digital_estocastica_2(ruta_base=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'Datos', 'venta_zona'), carpeta_salida='ventas_digitales_estocasticas', resumen_parametros_path='resumen_zonas_con_parametros.xlsx'):
+    tiempo_inicio = pd.Timestamp.now()
     if not os.path.exists(carpeta_salida):
         os.makedirs(carpeta_salida)
 
-    for dia in range(1, dias + 1):
-        archivo_original = f"{ruta_base_original}_{dia}_20250115.csv"
+    resumen_parametros = pd.read_excel(
+        resumen_parametros_path).set_index('id_producto')
+
+    for dia in range(1, 41):
+        archivo_original = f"{ruta_base}_{dia}_20250115.csv"
         if not os.path.exists(archivo_original):
-            print(f"⚠️ Archivo no encontrado: {archivo_original}")
+            print(f"⚠️ No encontrado: {archivo_original}")
             continue
 
         ventas_zona_dia = pd.read_csv(archivo_original)
-        ventas_zona_dia.rename(
-            columns={'venta_digital': 'cantidad'}, inplace=True)
-
-        # Aplicar variación estocástica
-        ventas_estocasticas = generar_demanda_digital_estocastica(
-            ventas_zona_dia)
-
-        # Guardar archivo con el nuevo nombre
+        df_estocastico = generar_demanda_digital_estocastica_2(
+            ventas_zona_dia, resumen_parametros)
         nombre_salida = os.path.join(
-            carpeta_salida, f"venta_zona_dia_{dia}.csv")
-        ventas_estocasticas.to_csv(nombre_salida, index=False)
+            carpeta_salida, f"venta_zona_estocastica_dia_{dia}.csv")
+        df_estocastico.to_csv(nombre_salida, index=False)
+        print(f"✅ Guardado: {nombre_salida}")
+    tiempo_fin = pd.Timestamp.now()
+    print(f"⏱️ Tiempo total: {tiempo_fin - tiempo_inicio}")
 
-        print(f"✅ Generado: {nombre_salida}")
 
-
-ruta_base_original = os.path.join(
-    base_dir, '..', 'Datos', 'venta_zona')
-generar_ventas_zona_estocasticas(ruta_base_original=ruta_base_original)
+generar_csvs_demanda_digital_estocastica_2()
