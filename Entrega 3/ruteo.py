@@ -10,6 +10,8 @@ import os
 from itertools import combinations
 from matplotlib.colors import ListedColormap, BoundaryNorm
 import matplotlib.pyplot as plt
+from matplotlib.offsetbox import OffsetImage, AnnotationBbox
+import matplotlib.image as mpimg
 
 
 def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_camiones, path_productos, dia):
@@ -348,7 +350,7 @@ def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_ca
     return df_resultados
 
 
-def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=False):
+def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=False, caso_base=False):
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     # data_resultados = pd.read_csv(path_resultados)
@@ -412,8 +414,31 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=
     plt.scatter(tiendas_grandes['pos_x'], tiendas_grandes['pos_y'],
                 c='red', marker='o', label='Tienda grande', zorder=3)
 
+    # # Usa PNG con fondo transparente
+    # icono_tienda = mpimg.imread(".png")
+
+    # fig, ax = plt.subplots()
+
+    # # Graficar las tiendas como íconos
+    # for x, y in zip(tiendas_pequenas['pos_x'], tiendas_pequenas['pos_y']):
+    #     imagebox = OffsetImage(icono_tienda, zoom=0.05)  # ajusta el zoom
+    #     ab = AnnotationBbox(imagebox, (x, y), frameon=False, zorder=3)
+    #     ax.add_artist(ab)
+    # for x, y in zip(tiendas_medianas['pos_x'], tiendas_medianas['pos_y']):
+    #     imagebox = OffsetImage(icono_tienda, zoom=0.05)  # ajusta el zoom
+    #     ab = AnnotationBbox(imagebox, (x, y), frameon=False, zorder=3)
+    #     ax.add_artist(ab)
+    # for x, y in zip(tiendas_grandes['pos_x'], tiendas_grandes['pos_y']):
+    #     imagebox = OffsetImage(icono_tienda, zoom=0.05)  # ajusta el zoom
+    #     ab = AnnotationBbox(imagebox, (x, y), frameon=False, zorder=3)
+    #     ax.add_artist(ab)
+
+    # plt.scatter([], [], c='blue', label='Tienda pequeña')
+
     if mejora_2_opt:
         plt.title('Rutas de Camiones - Clarke and Wright mejoradas con 2-opt')
+    elif caso_base:
+        plt.title('Rutas de Camiones - Caso Base')
     else:
         plt.title('Rutas de Camiones - Clarke and Wright')
     plt.xlabel('Coordenada X')
@@ -451,12 +476,19 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=
     im = plt.imshow(grilla_indices,  cmap=color_map,
                     norm=norm, zorder=1, alpha=0.5)
 
-    output_dir = os.path.join(base_dir, 'resultados',
-                              f'dia_{dia}', 'graficos_CW')
+    if not caso_base:
+        output_dir = os.path.join(base_dir, 'resultados',
+                                  f'dia_{dia}', 'graficos_CW')
+    else:
+        output_dir = os.path.join(base_dir, 'resultados',
+                                  f'dia_{dia}', 'graficos_CW_caso_base')
     os.makedirs(output_dir, exist_ok=True)
 
-    nombre_archivo = f'rutas_camiones_todas_las_tiendas_CW_mejoradas_2opt_dia_{dia}.png' if mejora_2_opt \
-        else f'rutas_camiones_todas_las_tiendas_CW_dia_{dia}.png'
+    if caso_base:
+        nombre_archivo = f'rutas_camiones_todas_las_tiendas_CW_caso_base_dia_{dia}.png'
+    else:
+        nombre_archivo = f'rutas_camiones_todas_las_tiendas_CW_mejoradas_2opt_dia_{dia}.png' if mejora_2_opt \
+            else f'rutas_camiones_todas_las_tiendas_CW_dia_{dia}.png'
 
     plt.savefig(os.path.join(output_dir, nombre_archivo))
     # plt.show()
@@ -465,15 +497,24 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=
     df_distancia_total = pd.DataFrame(
         {'distancia_total': [distancia_total]}
     )
-    if not os.path.exists(os.path.join(base_dir, 'resultados', f'dia_{dia}')):
-        os.makedirs(os.path.join(base_dir, 'resultados', f'dia_{dia}'))
-
-    if not mejora_2_opt:
-        df_distancia_total.to_csv(os.path.join(
-            base_dir, 'resultados', f'dia_{dia}', f'distancia_total_CW_dia_{dia}.csv'), index=False)
+    if not caso_base:
+        if not os.path.exists(os.path.join(base_dir, 'resultados', f'dia_{dia}')):
+            os.makedirs(os.path.join(base_dir, 'resultados', f'dia_{dia}'))
     else:
+        if not os.path.exists(os.path.join(base_dir, 'resultados', f'dia_{dia}', 'caso_base')):
+            os.makedirs(os.path.join(base_dir, 'resultados',
+                        f'dia_{dia}', 'caso_base'))
+
+    if caso_base:
         df_distancia_total.to_csv(os.path.join(
-            base_dir, 'resultados', f'dia_{dia}', f'distancia_total_mejorada_2opt_CW_dia_{dia}.csv'), index=False)
+            base_dir, 'resultados', f'dia_{dia}', 'caso_base', f'distancia_total_CW_caso_base_dia_{dia}.csv'), index=False)
+    else:
+        if not mejora_2_opt:
+            df_distancia_total.to_csv(os.path.join(
+                base_dir, 'resultados', f'dia_{dia}', f'distancia_total_CW_dia_{dia}.csv'), index=False)
+        else:
+            df_distancia_total.to_csv(os.path.join(
+                base_dir, 'resultados', f'dia_{dia}', f'distancia_total_mejorada_2opt_CW_dia_{dia}.csv'), index=False)
 
     return True
 
@@ -571,3 +612,292 @@ def mejorar_rutas_2_opt(data_resultados, path_zonas, path_tiendas, dia):
     data_resultados_mejorados.to_csv(output_path, index=False)
 
     return data_resultados_mejorados
+
+
+def caso_base_ruteo(path_zonas, path_tiendas, path_venta_zona, path_flota, path_camiones, path_productos, dia):
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    zonas_data = pd.read_csv(path_zonas)
+    tiendas_data = pd.read_csv(path_tiendas)
+    tiendas_data['pos_x'] -= 1
+    tiendas_data['pos_y'] -= 1
+    coords_zonas = zonas_data[['x_zona', 'y_zona']].values
+    coords_tiendas = tiendas_data[['pos_x', 'pos_y']].values
+
+    dist_matrix = cdist(coords_zonas, coords_zonas, metric='euclidean')
+
+    # Se calcula la matríz de distancias eucledianas entre solo zonas.
+    dist_df = pd.DataFrame(
+        dist_matrix,
+        index=zonas_data['id_zona'],
+        columns=zonas_data['id_zona']
+    )
+
+    clientes_1_data = pd.read_csv(path_venta_zona)
+    flota_data = pd.read_csv(path_flota)
+    camiones_data = pd.read_csv(path_camiones)
+    productos_data = pd.read_csv(path_productos)
+
+    clientes_productos_data = pd.merge(
+        clientes_1_data, productos_data, on='id_producto', how='inner')
+    clientes_productos_data = clientes_productos_data.drop(
+        columns=[col for col in clientes_productos_data.columns if "Unnamed" in col])
+
+    zonas_datos = pd.merge(clientes_productos_data, zonas_data, on='id_zona')
+    zonas_datos = zonas_datos.drop(
+        columns=[col for col in zonas_datos.columns if "Unnamed" in col])
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+
+    zonas_data = pd.read_csv(path_zonas)
+    tiendas_data = pd.read_csv(path_tiendas)
+    tiendas_data['pos_x'] -= 1
+    tiendas_data['pos_y'] -= 1
+    coords_zonas = zonas_data[['x_zona', 'y_zona']].values
+    coords_tiendas = tiendas_data[['pos_x', 'pos_y']].values
+
+    clientes_1_data = pd.read_csv(path_venta_zona)
+    flota_data = pd.read_csv(path_flota)
+    camiones_data = pd.read_csv(path_camiones)
+    productos_data = pd.read_csv(path_productos)
+
+    clientes_productos_data = pd.merge(
+        clientes_1_data, productos_data, on='id_producto', how='inner')
+    clientes_productos_data = clientes_productos_data.drop(
+        columns=[col for col in clientes_productos_data.columns if "Unnamed" in col])
+
+    zonas_datos = pd.merge(clientes_productos_data, zonas_data, on='id_zona')
+    zonas_datos = zonas_datos.drop(
+        columns=[col for col in zonas_datos.columns if "Unnamed" in col])
+
+    # === Agrupar por tienda física ===
+    tiendas = zonas_datos['tienda_zona'].unique()
+    rutas_totales = {}
+
+    camiones_rutas_dict = {}
+
+    demanda_insatisfecha_por_tienda = {}
+
+    for index, row in tiendas_data.iterrows():
+        tienda = row['id_tienda']
+        print(f"\nProcesando tienda: {tienda}")
+        # row de la forma: id_tienda tipo_tienda pos_x  pos_y
+        print(row)
+
+        # Subconjunto de zonas asociadas a esta tienda
+        # id_zona  id_producto  venta_digital  volumen  x_zona  y_zona  tienda_zona
+        sub_zonas = zonas_datos[zonas_datos['tienda_zona'] == tienda].copy()
+        sub_zonas = sub_zonas.reset_index(drop=True)
+        sub_zonas[['x_zona', 'y_zona']] = sub_zonas[[
+            'x_zona', 'y_zona']].apply(pd.to_numeric)
+
+        # Obtener tipo y cantidad de camiones para la tienda
+        flota_info = flota_data[flota_data['id_tienda'] == tienda]
+
+        # flota_info es una fila: id_tienda  id_camion  N
+        id_camion = flota_info.iloc[0]['id_camion']
+        n_camiones = flota_info.iloc[0]['N'].astype(int)
+        capacidad = camiones_data.loc[camiones_data['tipo_camion']
+                                      == id_camion, 'Q'].values[0]
+
+        # Cargar el camión y definir rutas
+        posicion_camion = row[['pos_x', 'pos_y']].values
+
+        print(f"\nPosición inicial del camión: {posicion_camion}")
+        print(f"\nCapacidad del camión: {capacidad}")
+
+        camiones_rutas_dict[tienda] = {
+            'posicion_tienda': posicion_camion,
+            'camiones': n_camiones,
+            'capacidad': capacidad,
+            'rutas': [
+                {'camion': i + 1, 'zonas': [], 'carga': 0, 'distancia_recorrida': 0} for i in range(n_camiones)
+            ]
+        }
+
+        id_zona_tienda = sub_zonas[(sub_zonas['x_zona'] == posicion_camion[0]) & (
+            sub_zonas['y_zona'] == posicion_camion[1])].iloc[0]['id_zona']
+
+        zonas_unicas = sub_zonas[['id_zona', 'x_zona', 'y_zona', 'tienda_zona']].drop_duplicates(
+            subset=['id_zona']).reset_index(drop=True)
+        print("Zonas únicas:")
+        print(zonas_unicas)
+
+        # Inicializar las zonas visitadas
+        visitadas = np.zeros(len(zonas_unicas), dtype=bool)
+
+        for i in range(n_camiones):
+            n_camion = i + 1
+            carga_camion = 0
+            contador = 0
+            camiones_rutas_dict[tienda]['rutas'][i]['camion'] = n_camion
+
+            zonas_recorrido = []
+
+            zonas_recorrido.append({
+                'id_zona': id_zona_tienda,
+                'x': row['pos_x'],
+                'y': row['pos_y']
+            })
+
+            if n_camion == 1:
+                # ver demanda de la zona de la tienda
+                info_zona_tienda = sub_zonas[(
+                    sub_zonas['id_zona'] == id_zona_tienda)]
+                volumen_zona_tienda = 0
+                for indice, rowtienda in info_zona_tienda.iterrows():
+                    volumen_zona_tienda += int(rowtienda['venta_digital']
+                                               ) * int(rowtienda['volumen'])
+                carga_camion += volumen_zona_tienda
+
+            pos_actual_camion = posicion_camion
+            distancia_total_camion = 0
+
+            # Marcar la zona de la tienda visitada para los camiones
+            visitadas[zonas_unicas['id_zona'] == id_zona_tienda] = True
+
+            while carga_camion < int(capacidad) and not visitadas.all():
+                # Calcular distancias solo para las zonas no visitadas (copilot)
+                # print(
+                #     f"Calculando distancias desde la posición actual del camión: {pos_actual_camion}")
+                indices_no_visitadas = np.where(~visitadas)[0]  # Chatgpt
+                distancias = zonas_unicas.loc[~visitadas, ['x_zona', 'y_zona']].apply(
+                    lambda fila: np.linalg.norm(pos_actual_camion - np.array([fila['x_zona'], fila['y_zona']])), axis=1
+                )
+
+                # Seleccionar la zona más cercana (Chatgpt)
+                indice_min_dist_subset = distancias.idxmin()
+                indice_real = indices_no_visitadas[list(
+                    distancias.index).index(indice_min_dist_subset)]
+                fila = zonas_unicas.iloc[indice_real]
+
+                info_zona = sub_zonas[(
+                    sub_zonas['id_zona'] == fila['id_zona'])]
+                volumen_zona = 0
+                for indice, row2 in info_zona.iterrows():
+                    volumen_zona += int(row2['venta_digital']
+                                        ) * int(row2['volumen'])
+
+                distancia = distancias[indice_min_dist_subset]
+
+                if carga_camion + volumen_zona > capacidad:
+                    break
+
+                # Agregar la zona al recorrido
+                zonas_recorrido.append({
+                    'id_zona': fila['id_zona'],
+                    'x': fila['x_zona'],
+                    'y': fila['y_zona']
+                })
+
+                distancia_total_camion += distancia
+                pos_actual_camion = np.array([fila['x_zona'], fila['y_zona']])
+                carga_camion += volumen_zona
+
+                # print(
+                #     f"posición del camión: {pos_actual_camion}, carga: {carga_camion}")
+
+                # Marcar la zona como visitada
+                visitadas[indice_real] = True
+
+            # Que el camion vuelva a la tienda después de recorrer las zonas
+
+            zonas_recorrido.append({
+                'id_zona': id_zona_tienda,
+                'x': row['pos_x'],
+                'y': row['pos_y']
+            })
+            print(
+                f"Zona recorrida (tienda): {id_zona_tienda}, coordenadas: {row['pos_x'], row['pos_y']}")
+
+            distancia_total_camion += np.linalg.norm(
+                pos_actual_camion - np.array([row['pos_x'], row['pos_y']]))
+            camiones_rutas_dict[tienda]['rutas'][i]['zonas'] = zonas_recorrido
+            camiones_rutas_dict[tienda]['rutas'][i]['carga'] = carga_camion
+            camiones_rutas_dict[tienda]['rutas'][i]['distancia_recorrida'] = distancia_total_camion
+
+        # Revisar demanda insatisfecha basada en el índice booleano `visitadas` (copilot)
+        if not visitadas.all():
+            demanda_insatisfecha = sub_zonas.loc[~visitadas].rename(
+                columns={'venta_digital': 'unidades_pendientes'}
+            )
+            demanda_insatisfecha_por_tienda[tienda] = demanda_insatisfecha
+
+    rutas_totales = {}
+
+    for tienda, info in camiones_rutas_dict.items():
+        rutas_totales[tienda] = []
+        for ruta in info['rutas']:
+            zonas_ruta = [zona['id_zona'] for zona in ruta['zonas']]
+            rutas_totales[tienda].append({
+                'ruta': zonas_ruta,
+                'carga': ruta['carga'],
+                'distancia': ruta['distancia_recorrida']
+            })
+
+    # Guardar rutas en un archivo CSV
+
+    output_path = os.path.join(
+        base_dir, 'resultados', f'dia_{dia}', 'caso_base', f'resultados_caso_base_dia_{dia}.csv')
+
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
+
+    # ----- Cambiar ------
+    # rutas_output = []
+    # # copilot:
+    # for tienda, info in camiones_rutas_dict.items():
+    #     for ruta in info['rutas']:
+    #         for zona in ruta['zonas']:
+    #             rutas_output.append({
+    #                 'tienda': tienda,
+    #                 'camion': ruta['camion'],
+    #                 'id_zona': zona['id_zona'],
+    #                 'x': zona['x'],
+    #                 'y': zona['y'],
+    #                 'carga_total_camion': ruta['carga'],
+    #                 'distancia_total_recorrida_camion': ruta['distancia_recorrida']
+    #             })
+    # df_resultados = pd.DataFrame(rutas_output)
+
+    # -----  ------
+
+    resultados = []
+    n_camiones_disponibles_por_tienda = {}
+    for index, row in flota_data.iterrows():
+        tienda = row['id_tienda']
+        n_camiones_disponibles_por_tienda[tienda] = row['N']
+
+    for tienda, rutas in rutas_totales.items():
+        print(f"\n Rutas desde tienda: {tienda}")
+        for i, r in enumerate(rutas):
+            print(
+                f"  Ruta {i+1}: {r['ruta']}, Carga: {r['carga']}, Distancia: {r['distancia']}")
+        resultados.append({
+            'tienda': tienda,
+            'rutas': [r['ruta'] for r in rutas],
+            'carga': [r['carga'] for r in rutas],
+            'distancia': [r['distancia'] for r in rutas],
+            'carga_total': sum(r['carga'] for r in rutas),
+            'n_camiones_utilizados': len(rutas),
+            'n_camiones_disponibles': n_camiones_disponibles_por_tienda[tienda]
+        })
+
+    df_resultados = pd.DataFrame(resultados)
+
+    df_resultados.to_csv(output_path, index=False)
+
+    # Guardar demanda insatisfecha en un archivo CSV
+    if demanda_insatisfecha_por_tienda:
+        demanda_insatisfecha = pd.concat(
+            demanda_insatisfecha_por_tienda.values())
+
+        demanda_insatisfecha_path = os.path.join(
+            base_dir, 'resultados', f'dia_{dia}', 'caso_base', f'demanda_insatisfecha_caso_base_dia_{dia}.csv')
+
+        if not os.path.exists(os.path.dirname(demanda_insatisfecha_path)):
+            os.makedirs(os.path.dirname(demanda_insatisfecha_path))
+        demanda_insatisfecha.to_csv(demanda_insatisfecha_path, index=False)
+    else:
+        print("No hay demanda insatisfecha para ninguna tienda.")
+
+    return df_resultados
