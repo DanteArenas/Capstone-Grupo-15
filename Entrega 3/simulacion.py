@@ -1,5 +1,5 @@
 # este archivo juntará todo, se llamarán a las funciones de cada archivo y se generarán las simulaciones
-from ruteo import generar_rutas, graficar_rutas, mejorar_rutas_2_opt
+from ruteo import generar_rutas, graficar_rutas, mejorar_rutas_2_opt, caso_base_ruteo
 from pricing import procesar_datos_de_distancia, generar_matriz_ck, resolver_precio_optimo
 import os
 
@@ -11,7 +11,7 @@ path_camiones = os.path.join(base_dir, '..', 'Datos', 'vehiculos_20250115.csv')
 path_productos = os.path.join(
     base_dir, '..', 'Datos', 'productos_20250115.csv')
 
-for dia in range(1, 3):
+for dia in range(1, 2):
     path_venta_zona = os.path.join(
         base_dir, 'ventas_digitales_estocasticas', f'venta_zona_estocastica_dia_{dia}.csv')
 
@@ -49,3 +49,13 @@ for dia in range(1, 3):
         os.makedirs(os.path.dirname(path_resultados))
 
     df_precios_optimos.to_csv(path_resultados, index=False)
+
+    # Caso base
+    data_resultados_caso_base = caso_base_ruteo(path_zonas, path_tiendas, path_venta_zona,
+                                                path_flota, path_camiones, path_productos, dia)
+    # Graficar rutas de caso base
+
+    resultados_caso_base = os.path.join(
+        base_dir, 'resultados', f'dia_{dia}', 'caso_base', f'resultados_caso_base_dia_{dia}.csv')
+    graficar_rutas(data_resultados_caso_base, path_zonas, path_tiendas,
+                   dia, caso_base=True)
