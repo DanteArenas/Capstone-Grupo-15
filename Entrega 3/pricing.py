@@ -8,6 +8,7 @@ import numpy as np
 import ast
 from sklearn.cluster import KMeans
 from pulp import LpMaximize, LpProblem, LpVariable, lpSum, LpContinuous
+import os
 
 def procesar_datos_de_distancia(df_resultados, n_clusters=3):
     """
@@ -310,8 +311,44 @@ def resolver_precio_optimo_inv(df_distancias_ordenado, df_stock, df_demanda, df_
 
     return df_precios_tienda_ruta
 
+def zona_vehiculo(data_resultados, df_zonas):
+    """
+    Recibe:
+    - data_resultados: DataFrame con las columnas ['tienda', 'rutas', 'carga', 'distancia', 'carga_total', 'n_camiones_utilizados', 'n_camiones_disponibles']
+    - df_zonas: DataFrame con las columnas ['id_zona', 'tienda_zona', 'x_zona', 'y_zona']
+    
+    Retorna:
+    - df_zona_vehiculo: DataFrame con las columnas ['id_zona', 'tienda_zona', 'vehiculo']
+    """
+        # Crear una lista para guardar los resultados
+    resultados = []
+    
+    # Iterar sobre cada fila del df_zonas
+    for _, zona_row in df_zonas.iterrows():
+        id_zona = zona_row['id_zona']
+        tienda_zona = zona_row['tienda_zona']
+        
+        # Buscar la tienda correspondiente en data_resultados
+        tienda_row = data_resultados[data_resultados['tienda'] == tienda_zona].iloc[0]
+        
+        # Obtener las rutas de los vehículos
+        rutas = tienda_row['rutas']
+        
+        # Iterar sobre las rutas de cada vehículo
+        for i, ruta in enumerate(rutas):
+            # Si el id_zona está en la ruta del vehículo, agregar el resultado
+            if id_zona in ruta:
+                resultados.append({
+                    'id_zona': id_zona,
+                    'tienda_zona': tienda_zona,
+                    'vehiculo': i  # El índice del vehículo en la lista de rutas
+                })
+    
+    # Convertir la lista de resultados en un DataFrame
+    df_zona_vehiculo = pd.DataFrame(resultados)
+    return df_zona_vehiculo
 
-def resolver_precio_optimo_zona(df_distancias_ordenado, df_stock, df_demanda, df_zonas, beta=0.0152, theta=0.9, max_price=55.9, num_precios=100, P_LB=7, P_UB=46, M=1900000):
+def resolver_precio_optimo_zona(matriz_ck, df_zona_vehiculo, df_stock, df_demanda, df_zonas, dia, beta=0.0152, theta=0.9, max_price=55.9, num_precios=100, P_LB=7, P_UB=46, M=1900000):
     """
     Recibe:
     - df_distancias_ordenado: DataFrame con las columnas ['tienda', 'vehiculo', 'distancia', 'cluster_ordenado', 'n_k (total clientes)', 'centroide', 'c_k']
@@ -323,27 +360,54 @@ def resolver_precio_optimo_zona(df_distancias_ordenado, df_stock, df_demanda, df
     Retorna:
     - df_precios_tienda_zona: DataFrame con ['id_zona', 'distancia', 'cluster_ordenado', 'n_clientes_ruta', 'n_k (total clientes)', 'centroide', 'c_k', 'p_k (entero óptimo)', 'U_k (entero óptimo)']
     """
-    
+    df_stock = df_stock[df_stock['dia'] == dia] # Filtrar por día
     # Paso 1: Unir df_demanda con df_zonas para obtener la tienda correspondiente a cada zona
     df_merged = pd.merge(df_demanda, df_zonas[['id_zona', 'tienda_zona']], on='id_zona', how='left')
 
     # Paso 2: Unir df_merged con df_stock para agregar stock_actual por tienda y producto
-    df_merged = pd.merge(df_merged, df_stock[['id_tienda', 'id_producto', 'stock_actual']], 
-                         left_on=['tienda_zona', 'id_producto'], right_on=['id_tienda', 'id_producto'], how='left')
+    df_resumen = pd.merge(df_merged, df_stock[['id_tienda', 'id_producto', 'stock_actual']], 
+                      left_on=['tienda_zona', 'id_producto'], right_on=['id_tienda', 'id_producto'], how='left')
+    df_resumen = df_resumen.drop(columns=['tienda_zona'])
+    
+    # retorna id_zona id_producto venta_digital id_tienda stock_actual I_UB
+    
 
-    # Paso 3: Calcular I_UB como el 1.3% de la demanda total por producto y tienda
-    df_merged['I_UB'] = df_merged['venta_digital'] * 1.3  # 1.3% de la demanda total por producto y tienda
+    # Paso 3: Unir df_resumen con df_zona_vehiculo para obtener la información de la zona y vehículo
+    df_resumen = pd.merge(df_resumen, df_zona_vehiculo[['id_zona', 'tienda_zona', 'vehiculo']], on='id_zona', how='left')
+    df_resumen = df_resumen.drop(columns=['tienda_zona'])
+    df_resumen = df_resumen.groupby('id_zona').agg({
+        'venta_digital': 'mean',
+        'stock_actual': 'mean',
+        'id_tienda': 'mean',
+        'vehiculo': 'mean',
+        'id_producto': 'mean'
+        }).reset_index()
+    df_resumen = df_resumen.drop(columns=['id_producto'])
+    df_resumen['id_tienda'] = df_resumen['id_tienda'].astype(int)
+    df_resumen['vehiculo'] = df_resumen['vehiculo'].astype(int)
+    df_resumen['I_UB'] = df_resumen['venta_digital'] * 100
 
-    # Paso 4: Unir df_merged con df_distancias_ordenado usando 'tienda_zona' para obtener la información de la tienda
-    df_final = pd.merge(df_distancias_ordenado, df_merged[['id_zona', 'tienda_zona', 'venta_digital', 'stock_actual', 'I_UB']], 
-                        left_on='tienda', right_on='tienda_zona', how='left')
+    # retorna id_zona id_producto venta_digital id_tienda stock_actual I_UB
+    print("df_resumen:", df_resumen.head())
+
+    # Paso 4: Unir df_resumen con matriz_ck usando 'id_tienda' y 'vehiculo' para obtener la información de la tienda
+    # Renombrar 'id_tienda' en df_resumen a 'tienda' para que coincida con la columna en matriz_ck
+    df_resumen = df_resumen.rename(columns={'id_tienda': 'tienda'})
+
+    # Unir df_resumen con matriz_ck utilizando la columna 'tienda' y 'vehiculo'
+    df_final = pd.merge(df_resumen, matriz_ck[['tienda', 'vehiculo', 'distancia', 'cluster_ordenado', 'n_k (total clientes)', 'centroide', 'c_k']], 
+                     on=['tienda', 'vehiculo'], how='left')
+    
+    print("df_final:", df_final.head())
 
     # Crear los candidatos de precios
     price_candidates = np.linspace(0, max_price, num_precios)
     price_indices = list(range(len(price_candidates)))
+    print("candidatos de precios")
 
     # Paso 5: Crear el modelo de optimización
     model = LpProblem("Maximizar_Utilidad_Por_Cluster", LpMaximize)
+    print("modelo creado")
 
     # Definir las variables binarias para las rutas y los precios
     x = {
@@ -351,12 +415,14 @@ def resolver_precio_optimo_zona(df_distancias_ordenado, df_stock, df_demanda, df
         for k in df_final.index
         for i in price_indices
     }
+    print("variables creadas")
 
     # Variables para los precios óptimos por cluster
     p_vars = {
         k: LpVariable(f"p_{k}", lowBound=0, cat=LpContinuous)
         for k in df_final.index
     }
+    print("variables de precios creadas")
 
     # Definir la función objetivo
     model += lpSum([
@@ -366,27 +432,31 @@ def resolver_precio_optimo_zona(df_distancias_ordenado, df_stock, df_demanda, df
         for k, row in df_final.iterrows()
         for i in price_indices
     ])
+    print("función objetivo definida")
 
     # Restricciones para asegurar que cada ruta tenga exactamente un precio
     for k in df_final.index:
         model += lpSum([x[(k, i)] for i in price_indices]) == 1
+    print("restricciones de ruta definidas")
 
     # Definir las restricciones para los precios óptimos
     for k in df_final.index:
         model += p_vars[k] == lpSum([price_candidates[i] * x[(k, i)] for i in price_indices])
+    print("restricciones de precios definidas")
 
     # Asegurarse de que el precio óptimo sea mayor o igual al c_k
     for k, row in df_final.iterrows():
         model += p_vars[k] >= row['c_k']
+    print("restricciones de precio mínimo definidas")
 
     # Restringir los precios para que sean no decrecientes entre clusters
-    cluster_indices = list(df_final.index)
-    for k1, k2 in zip(cluster_indices, cluster_indices[1:]):
-        model += p_vars[k2] >= p_vars[k1]
+    #cluster_indices = list(df_final.index)
+    #for k1, k2 in zip(cluster_indices, cluster_indices[1:]):
+    #    model += p_vars[k2] >= p_vars[k1]
+    #print("restricciones de precios no decrecientes definidas")
 
     # Verificar si el nivel de inventario por producto y tienda es bajo
     for k, row in df_final.iterrows():
-        tienda = row['tienda']
         stock_actual = row['stock_actual']
         I_UB_tienda_producto = row['I_UB']
 
@@ -404,9 +474,11 @@ def resolver_precio_optimo_zona(df_distancias_ordenado, df_stock, df_demanda, df
             model += p_vars[k] <= P_LB - (1 - W_i) * M
             model += p_vars[k] >= P_UB - (1 - Z_i) * M
             model += W_i + Z_i == 1
+            print("restricciones de inventario")
 
     # Resolver el modelo
     model.solve()
+    print("modelo resuelto")
 
     # Recopilar los precios óptimos y las utilidades para cada cluster
     optimal_prices = []
@@ -423,25 +495,55 @@ def resolver_precio_optimo_zona(df_distancias_ordenado, df_stock, df_demanda, df
         optimal_utils.append(U_k)
 
     # Crear un nuevo DataFrame con los precios y utilidades óptimos
-    df_precios_tienda_ruta = df_final.copy()
-    df_precios_tienda_ruta['p_k (entero óptimo)'] = optimal_prices
-    df_precios_tienda_ruta['U_k (entero óptimo)'] = optimal_utils
+    df_precios_tienda_zona = df_final.copy()
+    df_precios_tienda_zona['p_k (entero óptimo)'] = optimal_prices
+    df_precios_tienda_zona['U_k (entero óptimo)'] = optimal_utils
+    df_precios_tienda_zona['dia'] = dia
 
-    # Paso 6: Agrupar por `id_zona` para obtener el precio promedio por zona
-    df_precios_tienda_zona = df_precios_tienda_ruta.groupby('id_zona').agg({
-        'distancia': 'mean',  # Promedio de las distancias
-        'cluster_ordenado': 'first',  # Primer cluster para la zona
-        'n_clientes_ruta': 'sum',  # Número total de clientes por ruta
-        'n_k (total clientes)': 'sum',  # Total de clientes en la zona
-        'centroide': 'mean',  # Promedio de los centroides
-        'c_k': 'mean',  # Promedio de los costos
-        'p_k (entero óptimo)': 'mean',  # Promedio de los precios óptimos
-        'U_k (entero óptimo)': 'mean'  # Promedio de las utilidades
-    }).reset_index()
+    # Seleccionar las columnas relevantes
+    df_precios_tienda_zona = df_precios_tienda_zona[['id_zona', 'distancia','p_k (entero óptimo)', 'U_k (entero óptimo)','dia']]
+
+    # Guardar df_precios_tienda_zona en un archivo CSV
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(
+        base_dir, 'resultados', f'dia_{dia}', f'resultados_pricing_dia_{dia}.csv')
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
+    df_precios_tienda_zona.to_csv(output_path, index=False)
+
     return df_precios_tienda_zona
 
 
-def caso_base(df_demanda):
+def caso_base_1(matriz_ck_base, df_zonas, dia):
+    beta = 0.0152
+    theta = 0.9
+
+    df_base= matriz_ck_base.copy()
+    df_base['p_k'] = 0
+    df_base['A_k(p_k)'] = -beta * df_base['p_k'] + theta
+    df_base['U_k'] = df_base['n_k (total clientes)'] * df_base['A_k(p_k)'] * (df_base['p_k'] - df_base['centroide'])
+
+    df_zonas = df_zonas.rename(columns={'tienda_zona': 'tienda'})
+    df_base = pd.merge(df_base, df_zonas[['id_zona', 'tienda']], on='tienda', how='left')
+
+    # Crear un nuevo DataFrame con las columnas solicitadas
+    df_final = df_base[['id_zona', 'distancia', 'p_k', 'U_k']].copy()
+
+    # Renombrar las columnas según la solicitud
+    df_final.rename(columns={'p_k': 'p_k (entero óptimo)', 'U_k': 'U_k (entero óptimo)'}, inplace=True)
+
+    # Añadir la columna 'dia' con la fecha actual
+    df_final['dia'] = dia
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(
+        base_dir, 'resultados', f'dia_{dia}', 'caso_base_1_pricing', f'resultados_caso_base_dia_{dia}.csv')
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
+    df_final.to_csv(output_path, index=False)
+    print("Caso base 1:" , df_final.head())
+    return df_final
+
+def caso_base_2(df_demanda, dia):
     """
     Recibe:
     - df_demanda: DataFrame con las columnas ['id_zona', 'id_producto', 'venta_digital']
@@ -453,6 +555,13 @@ def caso_base(df_demanda):
     suma_por_zona['P_i'] = 32.8 * suma_por_zona['venta_digital']
     suma_por_zona['A_k(P_i)'] = -0.0152 * suma_por_zona['P_i'] + 0.9
     suma_por_zona['U_k(P_i)'] = 0 * suma_por_zona['P_i'] 
-
-    df_tarifa_zona = suma_por_zona[['id_zona', 'venta_digital', 'P_i', 'A_k(P_i)', 'U_k(P_i)']].copy()
+    df_tarifa_zona = suma_por_zona[['id_zona', 'P_i', 'A_k(P_i)', 'U_k(P_i)']].copy()
+    df_tarifa_zona.rename(columns={'P_i': 'p_k (entero óptimo)', 'U_k(P_i)': 'U_k (entero óptimo)'}, inplace=True)
+    df_tarifa_zona['dia'] = dia
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(
+        base_dir, 'resultados', f'dia_{dia}', 'caso_base_2_pricing', f'resultados_caso_base_dia_{dia}.csv')
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
+    df_tarifa_zona.to_csv(output_path, index=False)
     return df_tarifa_zona
