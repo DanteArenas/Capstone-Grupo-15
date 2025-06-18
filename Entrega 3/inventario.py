@@ -415,10 +415,6 @@ kpis_dict = {
     'nivel_servicio': [
         resultados['nivel_servicio'],
         resultados_finales_4['nivel_servicio']
-    ],
-    'demanda_total': [
-        resultados['demanda_total'],
-        resultados_finales_4['demanda_total']
     ]
 }
 df_kpis = pd.DataFrame(kpis_dict)
