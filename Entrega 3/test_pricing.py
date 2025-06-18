@@ -1,5 +1,5 @@
 from ruteo import generar_rutas
-from pricing import procesar_datos_de_distancia, generar_matriz_ck, resolver_precio_optimo, resolver_precio_optimo_inv, resolver_precio_optimo_zona, zona_vehiculo, caso_base_1, caso_base_2
+from pricing import procesar_datos_de_distancia, generar_matriz_ck, resolver_precio_optimo, resolver_precio_optimo_inv, resolver_precio_optimo_zona, zona_vehiculo, caso_base_1, caso_base_2, agrupa_archivos
 import os
 
 # path_zonas, path_tiendas, path_venta_zona, path_flota, path_camiones, path_producto, dia
@@ -67,4 +67,8 @@ for col, values in unique_values.items():
     print(f"{col}: {values}")
 
 df_base_0 = caso_base_1(matriz_ck, df_zonas, dia=1)
-df_base_t = caso_base_2(df_demanda, dia=1)
+df_base_t = caso_base_2(df_demanda, dia=2)
+
+rutas = ['Entrega 3/resultados/dia_1/caso_base_2_pricing/resultados_caso_base_dia_1.csv', 'Entrega 3/resultados/dia_2/caso_base_2_pricing/resultados_caso_base_dia_2.csv']
+test = agrupa_archivos(rutas, 'total_caso_base_2')
+
