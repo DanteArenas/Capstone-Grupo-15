@@ -1,6 +1,7 @@
 # este archivo juntará todo, se llamarán a las funciones de cada archivo y se generarán las simulaciones
 from ruteo import generar_rutas, graficar_rutas, mejorar_rutas_2_opt, caso_base_ruteo
 from pricing import procesar_datos_de_distancia, generar_matriz_ck, resolver_precio_optimo
+from kpis import utilidad_total, distancia_promedio, utilidad_de_entregas, ventas_perdidas, demanda_online_insatisfecha, creacion_df_40_dias_ruteo
 import os
 
 base_dir = os.path.dirname(__file__)
@@ -11,7 +12,9 @@ path_camiones = os.path.join(base_dir, '..', 'Datos', 'vehiculos_20250115.csv')
 path_productos = os.path.join(
     base_dir, '..', 'Datos', 'productos_20250115.csv')
 
-for dia in range(1, 2):
+n_dias = 1
+
+for dia in range(1, n_dias + 1):
     path_venta_zona = os.path.join(
         base_dir, 'ventas_digitales_estocasticas', f'venta_zona_estocastica_dia_{dia}.csv')
 
@@ -59,3 +62,21 @@ for dia in range(1, 2):
         base_dir, 'resultados', f'dia_{dia}', 'caso_base', f'resultados_caso_base_dia_{dia}.csv')
     graficar_rutas(data_resultados_caso_base, path_zonas, path_tiendas,
                    dia, caso_base=True)
+
+# KPIs
+path_distancias_dias_caso_base = creacion_df_40_dias_ruteo(
+    n_dias, caso_base=True, mejorados=False, cw_solo=False)
+distancias_promedio_caso_base = distancia_promedio(
+    path_distancias_dias_caso_base)
+print(f"Distancia promedio caso base: {distancias_promedio_caso_base}")
+
+path_distancias_dias_cw_solo = creacion_df_40_dias_ruteo(
+    n_dias, caso_base=False, mejorados=False, cw_solo=True)
+distancias_promedio_cw_solo = distancia_promedio(path_distancias_dias_cw_solo)
+print(f"Distancia promedio CW solo: {distancias_promedio_cw_solo}")
+
+path_distancias_dias_mejorados = creacion_df_40_dias_ruteo(
+    n_dias, caso_base=False, mejorados=True, cw_solo=False)
+distancias_promedio_mejorados = distancia_promedio(
+    path_distancias_dias_mejorados)
+print(f"Distancia promedio mejorados: {distancias_promedio_mejorados}")
