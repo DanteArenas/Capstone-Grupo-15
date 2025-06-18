@@ -21,7 +21,7 @@ df_stock_diario = pd.read_csv(path_stock_diario)
 df_stock_diario_caso_base = pd.read_csv(path_stock_diario_caso_base)
 df_zonas = pd.read_csv(path_zonas)
 
-n_dias = 2
+n_dias = 40
 
 for dia in range(1, n_dias + 1):
     path_venta_zona = os.path.join(
@@ -52,11 +52,3 @@ for dia in range(1, n_dias + 1):
 
     df_precios_optimos_cb_1 = caso_base_1(matriz_ck, df_zonas, dia)
     df_precios_optimos_cb_2 = caso_base_2(df_demanda_digital, dia)
-
-
-# KPIs
-path_distancias_dias_caso_base = creacion_df_40_dias_ruteo(
-    n_dias, caso_base=True, mejorados=False, cw_solo=False)
-distancias_promedio_caso_base = distancia_promedio(
-    path_distancias_dias_caso_base)
-print(f"Distancia promedio caso base: {distancias_promedio_caso_base}")
