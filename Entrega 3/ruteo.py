@@ -338,13 +338,13 @@ def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_ca
         base_dir, 'resultados', f'dia_{dia}', f'resultados_CW_dia_{dia}.csv')
 
     if not os.path.exists(os.path.dirname(output_path)):
-        os.makedirs(os.path.dirname(output_path))
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
     df_resultados.to_csv(output_path, index=False)
 
     demanda_insatisfecha_path = os.path.join(
         base_dir, 'resultados', f'dia_{dia}', f'demanda_insatisfecha_CW_dia_{dia}.csv')
     if not os.path.exists(os.path.dirname(demanda_insatisfecha_path)):
-        os.makedirs(os.path.dirname(demanda_insatisfecha_path))
+        os.makedirs(os.path.dirname(demanda_insatisfecha_path), exist_ok=True)
     demanda_insatisfecha.to_csv(demanda_insatisfecha_path, index=False)
 
     return df_resultados
@@ -481,11 +481,11 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=
                                   f'dia_{dia}', 'graficos_CW')
     else:
         output_dir = os.path.join(base_dir, 'resultados',
-                                  f'dia_{dia}', 'graficos_CW_caso_base')
+                                  f'dia_{dia}', 'caso_base_ruteo', 'graficos_caso_base')
     os.makedirs(output_dir, exist_ok=True)
 
     if caso_base:
-        nombre_archivo = f'rutas_camiones_todas_las_tiendas_CW_caso_base_dia_{dia}.png'
+        nombre_archivo = f'rutas_camiones_todas_las_tiendas_caso_base_dia_{dia}.png'
     else:
         nombre_archivo = f'rutas_camiones_todas_las_tiendas_CW_mejoradas_2opt_dia_{dia}.png' if mejora_2_opt \
             else f'rutas_camiones_todas_las_tiendas_CW_dia_{dia}.png'
@@ -499,15 +499,16 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=
     )
     if not caso_base:
         if not os.path.exists(os.path.join(base_dir, 'resultados', f'dia_{dia}')):
-            os.makedirs(os.path.join(base_dir, 'resultados', f'dia_{dia}'))
-    else:
-        if not os.path.exists(os.path.join(base_dir, 'resultados', f'dia_{dia}', 'caso_base')):
             os.makedirs(os.path.join(base_dir, 'resultados',
-                        f'dia_{dia}', 'caso_base'))
+                        f'dia_{dia}'), exist_ok=True)
+    else:
+        if not os.path.exists(os.path.join(base_dir, 'resultados', f'dia_{dia}', 'caso_base_ruteo')):
+            os.makedirs(os.path.join(base_dir, 'resultados',
+                        f'dia_{dia}', 'caso_base_ruteo'), exist_ok=True)
 
     if caso_base:
         df_distancia_total.to_csv(os.path.join(
-            base_dir, 'resultados', f'dia_{dia}', 'caso_base', f'distancia_total_CW_caso_base_dia_{dia}.csv'), index=False)
+            base_dir, 'resultados', f'dia_{dia}', 'caso_base_ruteo', f'distancia_total_caso_base_dia_{dia}.csv'), index=False)
     else:
         if not mejora_2_opt:
             df_distancia_total.to_csv(os.path.join(
@@ -608,44 +609,13 @@ def mejorar_rutas_2_opt(data_resultados, path_zonas, path_tiendas, dia):
     output_path = os.path.join(
         base_dir, 'resultados', f'dia_{dia}', f'resultados_mejorados_CW_dia_{dia}.csv')
     if not os.path.exists(os.path.dirname(output_path)):
-        os.makedirs(os.path.dirname(output_path))
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
     data_resultados_mejorados.to_csv(output_path, index=False)
 
     return data_resultados_mejorados
 
 
 def caso_base_ruteo(path_zonas, path_tiendas, path_venta_zona, path_flota, path_camiones, path_productos, dia):
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-
-    zonas_data = pd.read_csv(path_zonas)
-    tiendas_data = pd.read_csv(path_tiendas)
-    tiendas_data['pos_x'] -= 1
-    tiendas_data['pos_y'] -= 1
-    coords_zonas = zonas_data[['x_zona', 'y_zona']].values
-    coords_tiendas = tiendas_data[['pos_x', 'pos_y']].values
-
-    dist_matrix = cdist(coords_zonas, coords_zonas, metric='euclidean')
-
-    # Se calcula la matríz de distancias eucledianas entre solo zonas.
-    dist_df = pd.DataFrame(
-        dist_matrix,
-        index=zonas_data['id_zona'],
-        columns=zonas_data['id_zona']
-    )
-
-    clientes_1_data = pd.read_csv(path_venta_zona)
-    flota_data = pd.read_csv(path_flota)
-    camiones_data = pd.read_csv(path_camiones)
-    productos_data = pd.read_csv(path_productos)
-
-    clientes_productos_data = pd.merge(
-        clientes_1_data, productos_data, on='id_producto', how='inner')
-    clientes_productos_data = clientes_productos_data.drop(
-        columns=[col for col in clientes_productos_data.columns if "Unnamed" in col])
-
-    zonas_datos = pd.merge(clientes_productos_data, zonas_data, on='id_zona')
-    zonas_datos = zonas_datos.drop(
-        columns=[col for col in zonas_datos.columns if "Unnamed" in col])
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
     zonas_data = pd.read_csv(path_zonas)
@@ -676,6 +646,9 @@ def caso_base_ruteo(path_zonas, path_tiendas, path_venta_zona, path_flota, path_
     camiones_rutas_dict = {}
 
     demanda_insatisfecha_por_tienda = {}
+
+    demanda_insatisfecha = pd.DataFrame(
+        columns=['id_zona', 'demanda', 'tienda'])
 
     for index, row in tiendas_data.iterrows():
         tienda = row['id_tienda']
@@ -817,10 +790,18 @@ def caso_base_ruteo(path_zonas, path_tiendas, path_venta_zona, path_flota, path_
 
         # Revisar demanda insatisfecha basada en el índice booleano `visitadas` (copilot)
         if not visitadas.all():
-            demanda_insatisfecha = sub_zonas.loc[~visitadas].rename(
-                columns={'venta_digital': 'unidades_pendientes'}
-            )
-            demanda_insatisfecha_por_tienda[tienda] = demanda_insatisfecha
+            zonas_no_visitadas = sub_zonas[sub_zonas['id_zona'].isin(
+                zonas_unicas.loc[~visitadas, 'id_zona'])]
+            zonas_no_visitadas = zonas_no_visitadas.copy()
+            zonas_no_visitadas['demanda'] = zonas_no_visitadas['venta_digital'] * \
+                zonas_no_visitadas['volumen']
+
+            demanda = zonas_no_visitadas.groupby(
+                'id_zona')['demanda'].sum().reset_index()
+            demanda['tienda'] = tienda
+
+            demanda_insatisfecha_por_tienda[tienda] = demanda[[
+                'id_zona', 'demanda', 'tienda']]
 
     rutas_totales = {}
 
@@ -837,7 +818,7 @@ def caso_base_ruteo(path_zonas, path_tiendas, path_venta_zona, path_flota, path_
     # Guardar rutas en un archivo CSV
 
     output_path = os.path.join(
-        base_dir, 'resultados', f'dia_{dia}', 'caso_base', f'resultados_caso_base_dia_{dia}.csv')
+        base_dir, 'resultados', f'dia_{dia}', 'caso_base_ruteo', f'resultados_caso_base_dia_{dia}.csv')
 
     if not os.path.exists(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path))
@@ -887,17 +868,12 @@ def caso_base_ruteo(path_zonas, path_tiendas, path_venta_zona, path_flota, path_
     df_resultados.to_csv(output_path, index=False)
 
     # Guardar demanda insatisfecha en un archivo CSV
-    if demanda_insatisfecha_por_tienda:
-        demanda_insatisfecha = pd.concat(
-            demanda_insatisfecha_por_tienda.values())
 
-        demanda_insatisfecha_path = os.path.join(
-            base_dir, 'resultados', f'dia_{dia}', 'caso_base', f'demanda_insatisfecha_caso_base_dia_{dia}.csv')
+    demanda_insatisfecha_path = os.path.join(
+        base_dir, 'resultados', f'dia_{dia}', 'caso_base_ruteo', f'demanda_insatisfecha_caso_base_dia_{dia}.csv')
 
-        if not os.path.exists(os.path.dirname(demanda_insatisfecha_path)):
-            os.makedirs(os.path.dirname(demanda_insatisfecha_path))
-        demanda_insatisfecha.to_csv(demanda_insatisfecha_path, index=False)
-    else:
-        print("No hay demanda insatisfecha para ninguna tienda.")
+    if not os.path.exists(os.path.dirname(demanda_insatisfecha_path)):
+        os.makedirs(os.path.dirname(demanda_insatisfecha_path))
+    demanda_insatisfecha.to_csv(demanda_insatisfecha_path, index=False)
 
     return df_resultados
