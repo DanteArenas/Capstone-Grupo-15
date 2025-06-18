@@ -17,7 +17,29 @@ def utilidad_de_entregas(path_tarifas):
 
 
 def ventas_perdidas():
-    pass
+    """
+    Retorna las ventas perdidas absolutas y porcentuales del caso óptimo.
+    """
+    ruta_csv = os.path.join('..', 'Datos', 'analisis de datos', 'kpi_ventas_perdidas_inventario.csv')
+    df = pd.read_csv(ruta_csv)
+    row = df[df['caso'] == 'optima']
+    if row.empty:
+        raise ValueError("No hay resultados para el caso 'optima'")
+    ventas_perdidas = float(row['ventas_perdidas'].values[0])
+    demanda_total = float(row['demanda_total'].values[0])
+    ventas_perdidas_pct = ventas_perdidas / demanda_total if demanda_total > 0 else 0.0
+    return ventas_perdidas, ventas_perdidas_pct
+
+    # Para Caso Base:
+    # row_base = df[df['caso'] == 'base']
+    # if not row_base.empty:
+    #     ventas_perdidas_base = float(row_base['ventas_perdidas'].values[0])
+    #     demanda_total_base = float(row_base['demanda_total'].values[0])
+    #     ventas_perdidas_pct_base = ventas_perdidas_base / demanda_total_base if demanda_total_base > 0 else 0.0
+    #     return {
+    #         'optima': (ventas_perdidas, ventas_perdidas_pct),
+    #         'base': (ventas_perdidas_base, ventas_perdidas_pct_base)
+    #     }
 
 
 def demanda_online_insatisfecha(path_demandas_online_insatisfechas):
