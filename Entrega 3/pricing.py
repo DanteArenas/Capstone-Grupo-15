@@ -565,3 +565,36 @@ def caso_base_2(df_demanda, dia):
         os.makedirs(os.path.dirname(output_path))
     df_tarifa_zona.to_csv(output_path, index=False)
     return df_tarifa_zona
+
+
+def agrupa_archivos(rutas_archivos, nombre_archivo):
+    """
+    Función que recibe un path de una carpeta y agrupa todos los archivos en un solo DataFrame.
+    
+    Parámetros:
+    - path_archivos: str, ruta a la carpeta donde están los archivos CSV (o de otro tipo)
+    
+    Retorna:
+    - pd.DataFrame con todos los datos de los archivos agrupados
+    """
+    
+    # Lista para almacenar los DataFrames
+    dfs = []
+    
+    # Recorremos todas las rutas de archivos y los leemos
+    for archivo in rutas_archivos:
+        if archivo.endswith('.csv'):  # Si el archivo es un CSV
+            df = pd.read_csv(archivo)
+            dfs.append(df)
+    
+    # Concatenamos todos los DataFrames de la lista en uno solo
+    df_final = pd.concat(dfs, ignore_index=True)
+
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    output_path = os.path.join(
+        base_dir, 'resultados', 'totales', f'{nombre_archivo}.csv')
+    if not os.path.exists(os.path.dirname(output_path)):
+        os.makedirs(os.path.dirname(output_path))
+    df_final.to_csv(output_path, index=False)
+    
+    return df_final
