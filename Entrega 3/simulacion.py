@@ -59,3 +59,4 @@ for dia in range(1, 2):
         base_dir, 'resultados', f'dia_{dia}', 'caso_base', f'resultados_caso_base_dia_{dia}.csv')
     graficar_rutas(data_resultados_caso_base, path_zonas, path_tiendas,
                    dia, caso_base=True)
+
