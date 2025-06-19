@@ -14,7 +14,7 @@ from matplotlib.offsetbox import OffsetImage, AnnotationBbox
 import matplotlib.image as mpimg
 
 
-def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_camiones, path_productos, dia):
+def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_camiones, path_productos, dia, sensibilidad=False, id_sensibilidad=None):
     base_dir = os.path.dirname(os.path.abspath(__file__))
 
     zonas_data = pd.read_csv(path_zonas)
@@ -336,6 +336,9 @@ def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_ca
     # Guardar resultados en CSV
     output_path = os.path.join(
         base_dir, 'resultados', f'dia_{dia}', f'resultados_CW_dia_{dia}.csv')
+    if sensibilidad == True:
+        output_path = os.path.join(
+            base_dir, 'resultados_sensibilidad', f'{id_sensibilidad}', f'dia_{dia}', f'resultados_CW_dia_{dia}.csv')
 
     if not os.path.exists(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
@@ -343,6 +346,9 @@ def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_ca
 
     demanda_insatisfecha_path = os.path.join(
         base_dir, 'resultados', f'dia_{dia}', f'demanda_insatisfecha_CW_dia_{dia}.csv')
+    if sensibilidad == True:
+        demanda_insatisfecha_path = os.path.join(
+            base_dir, 'resultados_sensibilidad', f'{id_sensibilidad}', f'dia_{dia}', f'demanda_insatisfecha_CW_dia_{dia}.csv')
     if not os.path.exists(os.path.dirname(demanda_insatisfecha_path)):
         os.makedirs(os.path.dirname(demanda_insatisfecha_path), exist_ok=True)
     demanda_insatisfecha.to_csv(demanda_insatisfecha_path, index=False)
@@ -350,7 +356,7 @@ def generar_rutas(path_zonas, path_tiendas, path_venta_zona, path_flota, path_ca
     return df_resultados
 
 
-def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=False, caso_base=False):
+def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=False, caso_base=False, sensibilidad=False, id_sensibilidad=None):
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     # data_resultados = pd.read_csv(path_resultados)
@@ -482,6 +488,9 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=
     else:
         output_dir = os.path.join(base_dir, 'resultados',
                                   f'dia_{dia}', 'caso_base_ruteo', 'graficos_caso_base')
+    if sensibilidad:
+        output_dir = os.path.join(base_dir, 'resultados_sensibilidad', f'{id_sensibilidad}',
+                                  f'dia_{dia}', 'graficos_CW')
     os.makedirs(output_dir, exist_ok=True)
 
     if caso_base:
@@ -505,17 +514,27 @@ def graficar_rutas(data_resultados, path_zonas, path_tiendas, dia, mejora_2_opt=
         if not os.path.exists(os.path.join(base_dir, 'resultados', f'dia_{dia}', 'caso_base_ruteo')):
             os.makedirs(os.path.join(base_dir, 'resultados',
                         f'dia_{dia}', 'caso_base_ruteo'), exist_ok=True)
+    if sensibilidad:
+        if not os.path.exists(os.path.join(base_dir, 'resultados_sensibilidad', f'dia_{dia}')):
+            os.makedirs(os.path.join(base_dir, 'resultados_sensibilidad', f'{id_sensibilidad}',
+                        f'dia_{dia}'), exist_ok=True)
 
-    if caso_base:
+    if caso_base and not sensibilidad:
         df_distancia_total.to_csv(os.path.join(
             base_dir, 'resultados', f'dia_{dia}', 'caso_base_ruteo', f'distancia_total_caso_base_dia_{dia}.csv'), index=False)
     else:
-        if not mejora_2_opt:
+        if not mejora_2_opt and not sensibilidad:
             df_distancia_total.to_csv(os.path.join(
                 base_dir, 'resultados', f'dia_{dia}', f'distancia_total_CW_dia_{dia}.csv'), index=False)
-        else:
+        elif mejora_2_opt and not sensibilidad:
             df_distancia_total.to_csv(os.path.join(
                 base_dir, 'resultados', f'dia_{dia}', f'distancia_total_mejorada_2opt_CW_dia_{dia}.csv'), index=False)
+        elif sensibilidad and mejora_2_opt:
+            df_distancia_total.to_csv(os.path.join(
+                base_dir, 'resultados_sensibilidad', f'{id_sensibilidad}', f'dia_{dia}', f'distancia_total_mejorada_2opt_CW_dia_{dia}.csv'), index=False)
+        elif sensibilidad and not mejora_2_opt:
+            df_distancia_total.to_csv(os.path.join(
+                base_dir, 'resultados_sensibilidad', f'{id_sensibilidad}', f'dia_{dia}', f'distancia_total_CW_dia_{dia}.csv'), index=False)
 
     return True
 
@@ -566,7 +585,7 @@ def mejora_2_opt_ruta(ruta, dist_df):
     return {'ruta_mejorada': ruta_actual, 'distancia': mejor_distancia}
 
 
-def mejorar_rutas_2_opt(data_resultados, path_zonas, path_tiendas, dia):
+def mejorar_rutas_2_opt(data_resultados, path_zonas, path_tiendas, dia, sensibilidad=False, id_sensibilidad=None):
     print("Mejorando rutas con 2-opt...")
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
@@ -608,6 +627,9 @@ def mejorar_rutas_2_opt(data_resultados, path_zonas, path_tiendas, dia):
         data_resultados_mejorados.at[i, 'distancia'] = nuevas_distancias
     output_path = os.path.join(
         base_dir, 'resultados', f'dia_{dia}', f'resultados_mejorados_CW_dia_{dia}.csv')
+    if sensibilidad:
+        output_path = os.path.join(
+            base_dir, 'resultados_sensibilidad', f'{id_sensibilidad}', f'dia_{dia}', f'resultados_mejorados_CW_dia_{dia}.csv')
     if not os.path.exists(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path), exist_ok=True)
     data_resultados_mejorados.to_csv(output_path, index=False)
