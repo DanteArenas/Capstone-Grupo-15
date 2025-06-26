@@ -400,6 +400,9 @@ def resolver_precio_optimo_zona(matriz_ck, df_zona_vehiculo, df_stock, df_demand
     
     print("df_final:", df_final.head())
 
+    # Calcular la cantidad de clientes limitante
+    limite_clientes = df_final['n_k (total clientes)'].quantile(0.45) 
+
     # Crear los candidatos de precios
     price_candidates = np.linspace(0, max_price, num_precios)
     price_indices = list(range(len(price_candidates)))
@@ -462,7 +465,7 @@ def resolver_precio_optimo_zona(matriz_ck, df_zona_vehiculo, df_stock, df_demand
 
         if stock_actual < I_UB_tienda_producto:
             # Añadir las restricciones si el nivel de inventario es bajo
-            if row['n_k (total clientes)'] > 500:  # Ajuste según el número de clientes en el cluster
+            if row['n_k (total clientes)'] > limite_clientes:  # Ajuste según el número de clientes en el cluster
                 W_i = 0
                 Z_i = 1  # Precio ajustado a P_UB
             else:
