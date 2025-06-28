@@ -249,7 +249,7 @@ def generar_demanda_digital_estocastica_2(ventas_zona_dia, resumen_parametros, s
     """
     if seed is not None:
         np.random.seed(seed)
-    
+
     demanda_estocastica = []
 
     for _, row in ventas_zona_dia.iterrows():
@@ -277,21 +277,20 @@ def generar_demanda_digital_estocastica_2(ventas_zona_dia, resumen_parametros, s
 
     return pd.DataFrame(demanda_estocastica)
 
-# Función principal para generar los 40 archivos CSV
-
-
-import os
-import pandas as pd
 
 def generar_csvs_demanda_digital_estocastica_2_multiple_realizaciones(
-    ruta_base='Datos/venta_zona',
+    ruta_base=os.path.join(os.path.dirname(
+        os.path.abspath(__file__)), '..', 'Datos', 'venta_zona'),
     resumen_parametros_path='resumen_zonas_con_parametros.xlsx',
     seeds=[101, 202, 303, 404, 505]
 ):
-    resumen_parametros = pd.read_excel(resumen_parametros_path).set_index('id_producto')
+    resumen_parametros = pd.read_excel(
+        resumen_parametros_path).set_index('id_producto')
 
     for i, seed in enumerate(seeds, start=1):
-        carpeta_salida = f'ventas_digitales_realizacion_{i}'
+
+        carpeta_salida = os.path.join(os.path.dirname(
+            os.path.abspath(__file__)), f'ventas_digitales_realizacion_{i}')
         os.makedirs(carpeta_salida, exist_ok=True)
         print(f"📁 Generando realización {i} con seed {seed}...")
 
@@ -303,13 +302,14 @@ def generar_csvs_demanda_digital_estocastica_2_multiple_realizaciones(
 
             ventas_zona_dia = pd.read_csv(archivo_original)
             df_estocastico = generar_demanda_digital_estocastica_2(
-                ventas_zona_dia, resumen_parametros, seed=seed + dia  # opcional: cambia un poco por día
+                ventas_zona_dia, resumen_parametros, seed=seed +
+                dia
             )
-            nombre_salida = os.path.join(carpeta_salida, f"venta_zona_estocastica_dia_{dia}.csv")
+            nombre_salida = os.path.join(
+                carpeta_salida, f"venta_zona_estocastica_dia_{dia}.csv")
             df_estocastico.to_csv(nombre_salida, index=False)
 
         print(f"✅ Finalizada realización {i} en carpeta: {carpeta_salida}")
 
 
-
-generar_csvs_demanda_digital_estocastica_2()
+generar_csvs_demanda_digital_estocastica_2_multiple_realizaciones()
