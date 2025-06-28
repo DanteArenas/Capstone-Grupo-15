@@ -242,11 +242,14 @@ def generar_variacion_estocastica_2(distribucion, param1, param2=None):
     return variacion
 
 
-def generar_demanda_digital_estocastica_2(ventas_zona_dia, resumen_parametros):
+def generar_demanda_digital_estocastica_2(ventas_zona_dia, resumen_parametros, seed=None):
     """
     Genera demanda digital estocástica para un DataFrame diario de ventas por zona,
     aplicando un factor multiplicador acotado según la distribución ajustada.
     """
+    if seed is not None:
+        np.random.seed(seed)
+    
     demanda_estocastica = []
 
     for _, row in ventas_zona_dia.iterrows():
@@ -277,29 +280,36 @@ def generar_demanda_digital_estocastica_2(ventas_zona_dia, resumen_parametros):
 # Función principal para generar los 40 archivos CSV
 
 
-def generar_csvs_demanda_digital_estocastica_2(ruta_base=os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'Datos', 'venta_zona'), carpeta_salida='ventas_digitales_estocasticas', resumen_parametros_path='resumen_zonas_con_parametros.xlsx'):
-    tiempo_inicio = pd.Timestamp.now()
-    if not os.path.exists(carpeta_salida):
-        os.makedirs(carpeta_salida)
+import os
+import pandas as pd
 
-    resumen_parametros = pd.read_excel(
-        resumen_parametros_path).set_index('id_producto')
+def generar_csvs_demanda_digital_estocastica_2_multiple_realizaciones(
+    ruta_base='Datos/venta_zona',
+    resumen_parametros_path='resumen_zonas_con_parametros.xlsx',
+    seeds=[101, 202, 303, 404, 505]
+):
+    resumen_parametros = pd.read_excel(resumen_parametros_path).set_index('id_producto')
 
-    for dia in range(1, 41):
-        archivo_original = f"{ruta_base}_{dia}_20250115.csv"
-        if not os.path.exists(archivo_original):
-            print(f"⚠️ No encontrado: {archivo_original}")
-            continue
+    for i, seed in enumerate(seeds, start=1):
+        carpeta_salida = f'ventas_digitales_realizacion_{i}'
+        os.makedirs(carpeta_salida, exist_ok=True)
+        print(f"📁 Generando realización {i} con seed {seed}...")
 
-        ventas_zona_dia = pd.read_csv(archivo_original)
-        df_estocastico = generar_demanda_digital_estocastica_2(
-            ventas_zona_dia, resumen_parametros)
-        nombre_salida = os.path.join(
-            carpeta_salida, f"venta_zona_estocastica_dia_{dia}.csv")
-        df_estocastico.to_csv(nombre_salida, index=False)
-        print(f"✅ Guardado: {nombre_salida}")
-    tiempo_fin = pd.Timestamp.now()
-    print(f"⏱️ Tiempo total: {tiempo_fin - tiempo_inicio}")
+        for dia in range(1, 41):
+            archivo_original = f"{ruta_base}_{dia}_20250115.csv"
+            if not os.path.exists(archivo_original):
+                print(f"⚠️ No encontrado: {archivo_original}")
+                continue
+
+            ventas_zona_dia = pd.read_csv(archivo_original)
+            df_estocastico = generar_demanda_digital_estocastica_2(
+                ventas_zona_dia, resumen_parametros, seed=seed + dia  # opcional: cambia un poco por día
+            )
+            nombre_salida = os.path.join(carpeta_salida, f"venta_zona_estocastica_dia_{dia}.csv")
+            df_estocastico.to_csv(nombre_salida, index=False)
+
+        print(f"✅ Finalizada realización {i} en carpeta: {carpeta_salida}")
+
 
 
 generar_csvs_demanda_digital_estocastica_2()
