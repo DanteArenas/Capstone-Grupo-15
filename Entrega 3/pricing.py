@@ -357,7 +357,7 @@ def zona_vehiculo(data_resultados, df_zonas):
     return df_zona_vehiculo
 
 
-def resolver_precio_optimo_zona(matriz_ck, df_zona_vehiculo, df_stock, df_demanda, df_zonas, dia, beta=0.0152, theta=0.9, max_price=55.9, num_precios=100, P_LB=7, P_UB=46, M=1900000):
+def resolver_precio_optimo_zona(matriz_ck, df_zona_vehiculo, df_stock, df_demanda, df_zonas, dia, beta=0.0152, theta=0.9, max_price=55.9, num_precios=100, P_LB=20, P_UB=40, M=1900000):
     """
     Recibe:
     - df_distancias_ordenado: DataFrame con las columnas ['tienda', 'vehiculo', 'distancia', 'cluster_ordenado', 'n_k (total clientes)', 'centroide', 'c_k']
@@ -411,7 +411,9 @@ def resolver_precio_optimo_zona(matriz_ck, df_zona_vehiculo, df_stock, df_demand
     print("df_final:", df_final.head())
 
     # Calcular la cantidad de clientes limitante
-    limite_clientes = df_final['n_k (total clientes)'].quantile(0.45)
+
+    limite_clientes = df_final['n_k (total clientes)'].quantile(0.55) 
+
 
     # Crear los candidatos de precios
     price_candidates = np.linspace(0, max_price, num_precios)
