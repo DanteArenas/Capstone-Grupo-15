@@ -48,7 +48,7 @@ def demanda_online_insatisfecha(path_demandas_online_insatisfechas):
     return data_demandas_online['demanda_total_insatisfecha'].mean()
 
 
-def creacion_df_n_dias_demanda_insatisfecha(n_dias, caso_base=False, cw=False):
+def creacion_df_n_dias_demanda_insatisfecha(n_dias, caso_base=False, cw=False, id_realizacion=None):
     df_output = pd.DataFrame(columns=['dia', 'demanda_total_insatisfecha'])
     base_dir = os.path.dirname(__file__)
     for i in range(1, n_dias + 1):
@@ -67,10 +67,10 @@ def creacion_df_n_dias_demanda_insatisfecha(n_dias, caso_base=False, cw=False):
                               ignore_index=True)
     # guardar el DataFrame en un archivo CSV
     if caso_base:
-        output_path = os.path.join(base_dir,
+        output_path = os.path.join(base_dir, f'realizacion_{id_realizacion}' if id_realizacion is not None else '',
                                    'resultados', f'demanda_total_insatisfecha_caso_base_{n_dias}_dias.csv')
     elif cw:
-        output_path = os.path.join(base_dir,
+        output_path = os.path.join(base_dir, f'realizacion_{id_realizacion}' if id_realizacion is not None else '',
                                    'resultados', f'demanda_total_insatisfecha_CW_{n_dias}_dias.csv')
     df_output.to_csv(output_path, index=False)
     return output_path
