@@ -116,7 +116,7 @@ for i in range(0, 6):
     df_agrupado_cb1 = agrupa_archivos(
         rutas_cb1, f'total_cb1_pricing_r{i}', id_realizacion=i)
     df_agrupado_cb2 = agrupa_archivos(
-        rutas_cb1, f'total_cb2_pricing_r{i}', id_realizacion=i)
+        rutas_cb2, f'total_cb2_pricing_r{i}', id_realizacion=i)
 
     path_tarifas_cb1 = os.path.join(
         base_dir, f'realizacion_{i}', 'resultados', 'totales', f'total_cb1_pricing_r{i}.csv')
