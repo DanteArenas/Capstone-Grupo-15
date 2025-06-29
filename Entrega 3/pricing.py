@@ -412,8 +412,7 @@ def resolver_precio_optimo_zona(matriz_ck, df_zona_vehiculo, df_stock, df_demand
 
     # Calcular la cantidad de clientes limitante
 
-    limite_clientes = df_final['n_k (total clientes)'].quantile(0.55) 
-
+    limite_clientes = df_final['n_k (total clientes)'].quantile(0.55)
 
     # Crear los candidatos de precios
     price_candidates = np.linspace(0, max_price, num_precios)
@@ -534,7 +533,7 @@ def resolver_precio_optimo_zona(matriz_ck, df_zona_vehiculo, df_stock, df_demand
     return df_precios_tienda_zona
 
 
-def caso_base_1(matriz_ck_base, df_zonas, dia):
+def caso_base_1(matriz_ck_base, df_zonas, dia, id_realizacion=None):
     beta = 0.0152
     theta = 0.9
 
@@ -559,7 +558,7 @@ def caso_base_1(matriz_ck_base, df_zonas, dia):
     df_final['dia'] = dia
     base_dir = os.path.dirname(os.path.abspath(__file__))
     output_path = os.path.join(
-        base_dir, 'resultados', f'dia_{dia}', 'caso_base_1_pricing', f'resultados_caso_base_dia_{dia}.csv')
+        base_dir, f'realizacion_{id_realizacion}', 'resultados', f'dia_{dia}', 'caso_base_1_pricing', f'resultados_caso_base_dia_{dia}.csv')
     if not os.path.exists(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path))
     df_final.to_csv(output_path, index=False)
@@ -567,7 +566,7 @@ def caso_base_1(matriz_ck_base, df_zonas, dia):
     return df_final
 
 
-def caso_base_2(df_demanda, dia):
+def caso_base_2(df_demanda, dia, id_realizacion=None):
     """
     Recibe:
     - df_demanda: DataFrame con las columnas ['id_zona', 'id_producto', 'venta_digital']
@@ -588,14 +587,14 @@ def caso_base_2(df_demanda, dia):
     df_tarifa_zona['dia'] = dia
     base_dir = os.path.dirname(os.path.abspath(__file__))
     output_path = os.path.join(
-        base_dir, 'resultados', f'dia_{dia}', 'caso_base_2_pricing', f'resultados_caso_base_dia_{dia}.csv')
+        base_dir, f'realizacion_{id_realizacion}', 'resultados', f'dia_{dia}', 'caso_base_2_pricing', f'resultados_caso_base_dia_{dia}.csv')
     if not os.path.exists(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path))
     df_tarifa_zona.to_csv(output_path, index=False)
     return df_tarifa_zona
 
 
-def agrupa_archivos(rutas_archivos, nombre_archivo):
+def agrupa_archivos(rutas_archivos, nombre_archivo, id_realizacion):
     """
     Función que recibe un path de una carpeta y agrupa todos los archivos en un solo DataFrame.
 
@@ -620,7 +619,7 @@ def agrupa_archivos(rutas_archivos, nombre_archivo):
 
     base_dir = os.path.dirname(os.path.abspath(__file__))
     output_path = os.path.join(
-        base_dir, 'resultados', 'totales', f'{nombre_archivo}.csv')
+        base_dir, f'realizacion_{id_realizacion}', 'resultados', 'totales', f'{nombre_archivo}.csv')
     if not os.path.exists(os.path.dirname(output_path)):
         os.makedirs(os.path.dirname(output_path))
     df_final.to_csv(output_path, index=False)

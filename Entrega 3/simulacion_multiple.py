@@ -12,18 +12,39 @@ path_flota = os.path.join(base_dir, '..', 'Datos', 'flota_20250115.csv')
 path_camiones = os.path.join(base_dir, '..', 'Datos', 'vehiculos_20250115.csv')
 path_productos = os.path.join(
     base_dir, '..', 'Datos', 'productos_20250115.csv')
-path_stock_diario = os.path.join(
-    base_dir, '..', 'Datos', 'analisis de datos', 'stock_diario.csv')
+
 path_stock_diario_caso_base = os.path.join(
     base_dir, '..', 'Datos', 'analisis de datos', 'stock_diario_caso_base.csv')
 
-df_stock_diario = pd.read_csv(path_stock_diario)
 df_stock_diario_caso_base = pd.read_csv(path_stock_diario_caso_base)
 df_zonas = pd.read_csv(path_zonas)
 
 
 for i in range(0, 6):
     n_dias = 40
+
+    path_base_stock_diario = os.path.join(
+        base_dir, '..', 'Datos', 'analisis de datos', 'inventario_escenarios')
+    if i == 0:
+        path_stock_diario = os.path.join(
+            path_base_stock_diario, 'semilla_42', 'stock_diario.csv')
+    if i == 1:
+        path_stock_diario = os.path.join(
+            path_base_stock_diario, 'semilla_101', 'stock_diario.csv')
+    if i == 2:
+        path_stock_diario = os.path.join(
+            path_base_stock_diario, 'semilla_202', 'stock_diario.csv')
+    if i == 3:
+        path_stock_diario = os.path.join(
+            path_base_stock_diario, 'semilla_303', 'stock_diario.csv')
+    if i == 4:
+        path_stock_diario = os.path.join(
+            path_base_stock_diario, 'semilla_404', 'stock_diario.csv')
+    if i == 5:
+        path_stock_diario = os.path.join(
+            path_base_stock_diario, 'semilla_505', 'stock_diario.csv')
+
+    df_stock_diario = pd.read_csv(path_stock_diario)
 
     for dia in range(1, n_dias + 1):
         path_venta_zona = os.path.join(

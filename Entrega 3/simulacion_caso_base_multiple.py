@@ -34,7 +34,7 @@ for i in range(0, 6):
         # Graficar rutas de caso base
 
         resultados_caso_base = os.path.join(
-            base_dir, 'resultados', f'dia_{dia}', 'caso_base', f'resultados_caso_base_dia_{dia}.csv')
+            base_dir, f'realizacion_{i}', 'resultados', f'dia_{dia}', 'caso_base', f'resultados_caso_base_dia_{dia}.csv')
         graficar_rutas(data_resultados_caso_base, path_zonas, path_tiendas,
                        dia, caso_base=True, id_realizacion=i)
 
@@ -47,9 +47,10 @@ for i in range(0, 6):
             df_distancias_ordenada, data_resultados_caso_base)
 
         # Resolver precio óptimo
-        path_demanda_digital = os.path.join(
-            base_dir, f'ventas_digitales_realizacion_{i}', f'venta_zona_estocastica_dia_{dia}.csv')
-        df_demanda_digital = pd.read_csv(path_demanda_digital)
 
-        df_precios_optimos_cb_1 = caso_base_1(matriz_ck, df_zonas, dia)
-        df_precios_optimos_cb_2 = caso_base_2(df_demanda_digital, dia)
+        df_demanda_digital = pd.read_csv(path_venta_zona)
+
+        df_precios_optimos_cb_1 = caso_base_1(
+            matriz_ck, df_zonas, dia, id_realizacion=i)
+        df_precios_optimos_cb_2 = caso_base_2(
+            df_demanda_digital, dia, id_realizacion=i)
