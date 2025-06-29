@@ -1,0 +1,42 @@
+VENTAS ESTOCÁSTICAS 1--------------------------------------------------------------------
+- 40 DÍAS - 
+(percentil 45)
+Utilidad de entregas con 3 clusters: 7693.2255334213605
+Utilidad total con 3 clusters: -86024658.4651204
+
+(percentil 55)
+[LB 7, UB 46]
+Utilidad de entregas con 3 clusters: 8342.379373528567
+Utilidad total con 3 clusters: -86024009.3112803
+
+[LB 10, UB 50]
+Utilidad de entregas con 3 clusters: 9496.84015984773
+Utilidad total con 3 clusters: -86022854.85049398
+
+[LB 15, UB 45]
+Utilidad de entregas con 3 clusters: 11191.7762100833
+Utilidad total con 3 clusters: -86021159.91444375
+
+[LB 20, UB 40]
+Utilidad de entregas con 3 clusters: 12394.16364799739
+Utilidad total con 3 clusters: -86019957.52700584
+
+(percentil 65)
+Utilidad de entregas con 3 clusters: 8342.379373528567
+Utilidad total con 3 clusters: -86024009.3112803
+
+(percentil 75)
+Utilidad de entregas con 3 clusters: 8342.379373528567
+Utilidad total con 3 clusters: -86024009.3112803
+
+Utilidad de entregas con 6 clusters: 456.3283444278863
+Utilidad total con 6 clusters: -86031895.3623094
+
+Utilidad de entregas con 10 clusters: 337.64577161099197
+Utilidad total con 10 clusters: -86032014.04488222
+
+Utilidad de entregas con 15 clusters: 169.39261234622
+Utilidad total con 15 clusters: -86032182.29804148
+-----------------------------------------------------------------------------------------
+
+
