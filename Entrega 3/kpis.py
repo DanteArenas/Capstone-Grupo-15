@@ -76,18 +76,18 @@ def creacion_df_n_dias_demanda_insatisfecha(n_dias, caso_base=False, cw=False):
     return output_path
 
 
-def creacion_df_40_dias_ruteo(n_dias, caso_base=False, cw_solo=False, mejorados=False):
+def creacion_df_40_dias_ruteo(n_dias, caso_base=False, cw_solo=False, mejorados=False, id_realizacion=None):
     df_output = pd.DataFrame(columns=['dia', 'distancia_total'])
     base_dir = os.path.dirname(__file__)
     for i in range(1, n_dias + 1):
         if caso_base:
-            path_distancia_total_dia = os.path.join(base_dir,
+            path_distancia_total_dia = os.path.join(base_dir, f'realizacion_{id_realizacion}' if id_realizacion is not None else '',
                                                     'resultados', f'dia_{i}', 'caso_base_ruteo', f'distancia_total_caso_base_dia_{i}.csv')
         elif cw_solo:
-            path_distancia_total_dia = os.path.join(base_dir,
+            path_distancia_total_dia = os.path.join(base_dir, f'realizacion_{id_realizacion}' if id_realizacion is not None else '',
                                                     'resultados', f'dia_{i}', f'distancia_total_CW_dia_{i}.csv')
         elif mejorados:
-            path_distancia_total_dia = os.path.join(base_dir,
+            path_distancia_total_dia = os.path.join(base_dir, f'realizacion_{id_realizacion}' if id_realizacion is not None else '',
                                                     'resultados', f'dia_{i}', f'distancia_total_mejorada_2opt_CW_dia_{i}.csv')
         else:
             raise ValueError(
@@ -99,13 +99,13 @@ def creacion_df_40_dias_ruteo(n_dias, caso_base=False, cw_solo=False, mejorados=
                               ignore_index=True)
     # guardar el DataFrame en un archivo CSV
     if caso_base:
-        output_path = os.path.join(base_dir,
+        output_path = os.path.join(base_dir, f'realizacion_{id_realizacion}' if id_realizacion is not None else '',
                                    'resultados', f'distancias_totales_caso_base_{n_dias}_dias.csv')
     elif cw_solo:
-        output_path = os.path.join(base_dir,
+        output_path = os.path.join(base_dir, f'realizacion_{id_realizacion}' if id_realizacion is not None else '',
                                    'resultados', f'distancias_totales_CW_{n_dias}_dias.csv')
     elif mejorados:
-        output_path = os.path.join(base_dir,
+        output_path = os.path.join(base_dir, f'realizacion_{id_realizacion}' if id_realizacion is not None else '',
                                    'resultados', f'distancias_totales_mejoradas_2opt_CW_{n_dias}_dias.csv')
     df_output.to_csv(output_path, index=False)
     return output_path
