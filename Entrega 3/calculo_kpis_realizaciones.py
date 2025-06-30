@@ -67,14 +67,16 @@ listas_kpis = [
 resultados = []
 for nombre, lista in listas_kpis:
     promedio, intervalo = calcular_promedio_intervalo(lista)
+    ic_pm = (intervalo[1] - intervalo[0]) / 2  # margen
     resultados.append({
         'kpi': nombre,
         'promedio': promedio,
         'ic_95_inf': intervalo[0],
-        'ic_95_sup': intervalo[1]
+        'ic_95_sup': intervalo[1],
+        'ic_95_pm': ic_pm
     })
     print(
-        f"{nombre}: Promedio = {promedio:.2f}, IC 95% = ({intervalo[0]:.2f}, {intervalo[1]:.2f})")
+        f"{nombre}: Promedio = {promedio:.2f}, IC 95% = {promedio:.2f} ± {ic_pm:.2f} ({intervalo[0]:.2f}, {intervalo[1]:.2f})")
 
 # Guardar resultados en un CSV
 df_resultados = pd.DataFrame(resultados)
